@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#111319">
+<title>Nictionary — Offline Word Game v1.9</title>
+<style>
+:root{
+  --bg:#101315;
+  --surface:#15191d;
+  --surface-2:#1c2127;
+  --surface-3:#2b3138;
+  --text:#f1f3f5;
+  --muted:#858d96;
+  --line:#343b43;
+  --line-soft:#252b31;
+  --accent:#846cff;
+  --correct:#2f9e73;
+  --present:#c49431;
+  --absent:#3b4352;
+  --danger:#ff7b87;
+  --tile:62px;
+  --font:"Segoe UI Variable Text","Segoe UI Variable","Aptos","Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+html{background:var(--bg)}
+body{
+  font-family:var(--font);
+  background:var(--bg);
+  color:var(--text);
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+button,input{font:inherit;color:inherit}
+button{-webkit-tap-highlight-color:transparent}
+button:focus-visible,[tabindex]:focus-visible,input:focus-visible{
+  outline:2px solid var(--accent);
+  outline-offset:3px;
+}
+.app{
+  min-height:100%;
+  width:min(100%,760px);
+  margin:0 auto;
+  padding:env(safe-area-inset-top) 14px env(safe-area-inset-bottom);
+  display:grid;
+  grid-template-rows:auto 1fr auto;
+}
+header{
+  min-height:64px;
+  display:grid;
+  grid-template-columns:1fr auto 1fr;
+  align-items:center;
+  gap:18px;
+  border-bottom:1px solid var(--line-soft);
+}
+.brand{display:flex;align-items:center;justify-self:start;min-width:0}
+.logo{display:none}
+.brand-text{line-height:1}
+.brand-text strong{
+  display:block;
+  font-size:18px;
+  font-weight:650;
+  letter-spacing:.075em;
+  text-transform:uppercase;
+  white-space:nowrap;
+}
+.brand-text span{
+  display:block;
+  margin-top:5px;
+  color:var(--muted);
+  font-size:8px;
+  font-weight:500;
+  letter-spacing:.22em;
+  text-transform:uppercase;
+  white-space:nowrap;
+}
+.mode-switch{
+  align-self:stretch;
+  display:flex;
+  align-items:flex-end;
+  gap:20px;
+  background:none;
+  border:0;
+  border-radius:0;
+  padding:0;
+}
+.mode-btn{
+  position:relative;
+  height:64px;
+  padding:0 0 18px;
+  border:0;
+  border-radius:0;
+  background:none;
+  color:var(--muted);
+  font-size:13px;
+  font-weight:600;
+  cursor:pointer;
+}
+.mode-btn::after{
+  content:"";
+  position:absolute;
+  left:0;right:0;bottom:-1px;
+  height:2px;
+  background:transparent;
+}
+.mode-btn:hover{color:var(--text)}
+.mode-btn.active{color:var(--text);background:none;box-shadow:none}
+.mode-btn.active::after{background:var(--accent)}
+.header-actions{
+  justify-self:end;
+  display:flex;
+  align-items:center;
+  gap:13px;
+}
+.icon-btn{
+  width:25px;
+  height:34px;
+  padding:0;
+  border:0;
+  border-radius:0;
+  background:none;
+  color:var(--muted);
+  display:grid;
+  place-items:center;
+  cursor:pointer;
+  transition:color .14s ease,transform .14s ease;
+}
+.icon-btn:hover{background:none;color:var(--text);transform:translateY(-1px)}
+.icon-btn:active{transform:translateY(0)}
+.icon-btn svg{
+  width:20px;
+  height:20px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:2;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+main{
+  min-height:0;
+  padding:26px 0 12px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+}
+.game-meta{
+  width:min(100%,420px);
+  min-height:28px;
+  margin:0 0 12px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  color:var(--muted);
+  font-size:12px;
+  font-variant-numeric:tabular-nums;
+}
+.puzzle-label{display:flex;align-items:center;gap:10px}
+.pill{
+  padding:0;
+  border:0;
+  border-radius:0;
+  background:none;
+  color:var(--text);
+  font-weight:650;
+}
+.streak{font-weight:550;color:var(--muted)}
+.board{
+  display:grid;
+  grid-template-rows:repeat(6,var(--tile));
+  gap:6px;
+  margin:0;
+  padding:0;
+}
+.row{display:grid;grid-template-columns:repeat(5,var(--tile));gap:6px}
+.tile{
+  position:relative;
+  width:var(--tile);
+  height:var(--tile);
+  display:grid;
+  place-items:center;
+  border:2px solid var(--line);
+  border-radius:2px;
+  background:transparent;
+  color:var(--text);
+  font-size:30px;
+  font-weight:700;
+  letter-spacing:.01em;
+  line-height:1;
+  text-transform:uppercase;
+  user-select:none;
+  transform-style:preserve-3d;
+}
+.tile.filled{border-color:#68727d;animation:pop .09s ease}
+.tile.correct,.tile.present,.tile.absent{color:#fff;border-color:transparent}
+.tile.correct{background:var(--correct)}
+.tile.present{background:var(--present)}
+.tile.absent{background:var(--absent)}
+.tile.reveal{animation:flip .5s ease forwards}
+.tile.shake{animation:shake .42s ease}
+.tile.bounce{animation:bounce .55s ease}
+.keyboard{
+  width:min(100%,580px);
+  margin-top:18px;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  touch-action:manipulation;
+}
+.key-row{display:flex;justify-content:center;gap:5px}
+.key{
+  height:54px;
+  min-width:0;
+  max-width:49px;
+  flex:1;
+  padding:0 4px;
+  border:0;
+  border-radius:3px;
+  background:#2b3137;
+  color:var(--text);
+  font-size:12px;
+  font-weight:650;
+  letter-spacing:.015em;
+  text-transform:uppercase;
+  cursor:pointer;
+  box-shadow:none;
+  transition:background .12s ease,transform .08s ease;
+}
+.key:hover{background:#353c44;filter:none}
+.key:active{transform:translateY(1px)}
+.key.wide{max-width:76px;font-size:10px}
+.key.correct{background:var(--correct)}
+.key.present{background:var(--present)}
+.key.absent{background:var(--absent);color:#c1c7ce}
+footer{
+  padding:8px 0 12px;
+  color:#68717b;
+  font-size:9px;
+  font-weight:500;
+  letter-spacing:.08em;
+  text-align:center;
+  text-transform:uppercase;
+}
+.toast-stack{
+  position:fixed;
+  top:76px;
+  left:50%;
+  z-index:100;
+  width:min(92vw,420px);
+  transform:translateX(-50%);
+  display:grid;
+  gap:8px;
+  pointer-events:none;
+}
+.toast{
+  justify-self:center;
+  padding:9px 13px;
+  border:1px solid var(--line);
+  border-radius:3px;
+  background:#20262c;
+  color:var(--text);
+  font-size:12px;
+  font-weight:550;
+  box-shadow:0 10px 28px rgba(0,0,0,.3);
+  animation:toastIn .18s ease;
+}
+.overlay{
+  position:fixed;
+  inset:0;
+  z-index:50;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+  background:rgba(5,7,9,.76);
+  backdrop-filter:blur(4px);
+}
+.overlay.open{display:flex}
+.modal{
+  width:min(100%,480px);
+  max-height:min(88vh,720px);
+  overflow:auto;
+  padding:22px;
+  border:1px solid var(--line);
+  border-radius:4px;
+  background:var(--surface);
+  box-shadow:0 24px 70px rgba(0,0,0,.48);
+}
+.modal-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:18px;
+  margin-bottom:18px;
+}
+.modal h2{
+  margin:0;
+  font-size:21px;
+  font-weight:650;
+  letter-spacing:-.02em;
+}
+.modal h3,.settings-section h3{
+  margin:20px 0 9px;
+  color:var(--text);
+  font-size:12px;
+  font-weight:650;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.modal p{
+  margin:0 0 14px;
+  color:#aeb6bf;
+  font-size:14px;
+  line-height:1.55;
+}
+.close{
+  width:28px;
+  height:28px;
+  padding:0;
+  border:0;
+  border-radius:0;
+  background:none;
+  color:var(--muted);
+  font-size:24px;
+  font-weight:300;
+  line-height:1;
+  cursor:pointer;
+}
+.close:hover{color:var(--text);background:none}
+.rule{margin:18px 0;color:#b5bdc6;font-size:13px;line-height:1.5}
+.example{display:flex;gap:5px;margin:9px 0}
+.mini{
+  width:42px;
+  height:42px;
+  display:grid;
+  place-items:center;
+  border:2px solid var(--line);
+  border-radius:2px;
+  font-size:18px;
+  font-weight:700;
+}
+.mini.correct{background:var(--correct);border-color:var(--correct)}
+.mini.present{background:var(--present);border-color:var(--present)}
+.mini.absent{background:var(--absent);border-color:var(--absent)}
+.disclaimer,.stats-note,.next-note{color:#737d87!important;font-size:11px!important}
+.setting{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:20px;
+  padding:15px 0;
+  border-bottom:1px solid var(--line-soft);
+}
+.setting div{display:grid;gap:4px}
+.setting div strong{font-size:14px;font-weight:600}
+.setting div span{color:var(--muted);font-size:12px;line-height:1.35}
+.switch{position:relative;width:42px;height:23px;flex:0 0 auto}
+.switch input{position:absolute;opacity:0;pointer-events:none}
+.slider{position:absolute;inset:0;border:1px solid #424a53;border-radius:99px;background:#252b31;cursor:pointer;transition:.15s ease}
+.slider::before{content:"";position:absolute;width:17px;height:17px;left:2px;top:2px;border-radius:50%;background:#9aa2ab;transition:.15s ease}
+.switch input:checked+.slider{border-color:var(--accent);background:rgba(132,108,255,.2)}
+.switch input:checked+.slider::before{transform:translateX(19px);background:var(--accent)}
+.settings-section{padding-top:4px}
+.settings-section p{font-size:12px}
+.data-actions,.share-actions,.result-actions{display:grid;gap:8px}
+.primary,.secondary,.danger{
+  width:100%;
+  min-height:42px;
+  padding:10px 14px;
+  border-radius:3px;
+  font-size:12px;
+  font-weight:650;
+  letter-spacing:.02em;
+  cursor:pointer;
+}
+.primary{border:1px solid var(--accent);background:var(--accent);color:#fff;box-shadow:none}
+.primary:hover{filter:brightness(1.06)}
+.secondary{margin-top:0;border:1px solid var(--line);background:transparent;color:var(--text)}
+.secondary:hover{border-color:#59636e;background:#1b2025}
+.danger{margin-top:10px;border:1px solid rgba(255,123,135,.45);background:transparent;color:var(--danger)}
+.file-input{display:none}
+.stats-tabs{
+  display:flex;
+  gap:18px;
+  margin:0 0 22px;
+  border-bottom:1px solid var(--line-soft);
+}
+.stats-tab{
+  position:relative;
+  padding:0 0 10px;
+  border:0;
+  border-radius:0;
+  background:none;
+  color:var(--muted);
+  font-size:12px;
+  font-weight:600;
+  cursor:pointer;
+}
+.stats-tab.active{color:var(--text);background:none}
+.stats-tab.active::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--accent)}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin:0 0 22px}
+.stat{text-align:center;padding:6px 3px;border-right:1px solid var(--line-soft)}
+.stat:last-child{border-right:0}
+.stat b{display:block;font-size:28px;font-weight:650;font-variant-numeric:tabular-nums}
+.stat span{display:block;margin-top:5px;color:var(--muted);font-size:9px;font-weight:550;letter-spacing:.07em;text-transform:uppercase}
+.dist{display:grid;gap:5px;margin-bottom:20px}
+.dist-row{display:grid;grid-template-columns:18px 1fr;align-items:center;gap:8px;font-size:12px;font-weight:600}
+.dist-bar{min-width:28px;padding:4px 7px;border-radius:2px;background:var(--absent);color:#fff;text-align:right;font-variant-numeric:tabular-nums}
+.end-card{text-align:center}
+.end-card .answer{margin:8px 0 4px;font-size:29px;font-weight:700;letter-spacing:.16em}
+.end-card .message{margin:0 0 16px;color:var(--muted)}
+.share-preview{
+  display:grid;
+  justify-content:center;
+  gap:4px;
+  margin:16px auto 18px;
+  color:var(--text);
+  font-size:20px;
+  line-height:1.05;
+  letter-spacing:2px;
+  white-space:pre;
+  text-align:left;
+}
+.share-preview:empty{display:none}
+.sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+.high-contrast{--correct:#f5793a;--present:#85c0f9;--absent:#414857}
+.high-contrast .tile.present,.high-contrast .key.present{color:#091018}
+.high-contrast .tile.correct::after,.high-contrast .tile.present::after{display:block;position:absolute;right:4px;bottom:3px;font-size:10px}
+.high-contrast .tile.correct::after{content:"●"}
+.high-contrast .tile.present::after{content:"◆"}
+@keyframes pop{50%{transform:scale(1.06)}}
+@keyframes flip{0%{transform:rotateX(0)}45%{transform:rotateX(90deg)}55%{transform:rotateX(90deg)}100%{transform:rotateX(0)}}
+@keyframes shake{10%,90%{transform:translateX(-2px)}20%,80%{transform:translateX(4px)}30%,50%,70%{transform:translateX(-7px)}40%,60%{transform:translateX(7px)}}
+@keyframes bounce{0%,20%{transform:translateY(0)}40%{transform:translateY(-13px)}60%{transform:translateY(2px)}80%{transform:translateY(-5px)}100%{transform:translateY(0)}}
+@keyframes toastIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+.reduce-motion *, .reduce-motion *::before,.reduce-motion *::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}
+@media(max-width:540px){
+  :root{--tile:min(15.8vw,57px)}
+  .app{padding-left:10px;padding-right:10px}
+  header{
+    min-height:58px;
+    grid-template-columns:minmax(0,1fr) auto auto;
+    grid-template-areas:none;
+    gap:8px;
+    align-content:center;
+    padding-top:0;
+  }
+  .brand{
+    grid-area:auto;
+    height:auto;
+    min-width:0;
+    overflow:hidden;
+  }
+  .brand-text strong{
+    font-size:16px;
+    letter-spacing:.025em;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .brand-text span{display:none}
+  .mode-switch{
+    grid-area:auto;
+    align-self:stretch;
+    height:58px;
+    align-items:flex-end;
+    justify-content:center;
+    gap:12px;
+  }
+  .mode-btn{
+    height:58px;
+    padding-bottom:17px;
+    font-size:12px;
+  }
+  .header-actions{
+    grid-area:auto;
+    gap:6px;
+    height:auto;
+  }
+  .icon-btn{width:23px;height:34px}
+  .icon-btn svg{width:20px;height:20px}
+  main{padding-top:16px;justify-content:flex-start}
+  .game-meta{margin-top:12px;margin-bottom:12px}
+  .keyboard{margin-top:18px}
+  .key{height:54px;font-size:12px;border-radius:3px}
+  .key.wide{font-size:9px}
+  .modal{padding:19px}
+}
+@media(max-width:380px){
+  :root{--tile:min(15.55vw,55px)}
+  .app{padding-left:8px;padding-right:8px}
+  header{gap:6px}
+  .brand-text strong{font-size:14px;letter-spacing:0}
+  .mode-switch{gap:9px}
+  .mode-btn{font-size:11px}
+  .header-actions{gap:3px}
+  .icon-btn{width:21px}
+  .icon-btn svg{width:19px;height:19px}
+  .game-meta{margin-top:10px}
+  .key-row{gap:4px}
+  .key{font-size:11px}
+}
+@media(max-height:730px){
+  :root{--tile:53px}
+  main{padding-top:10px}
+  .game-meta{margin-top:0;margin-bottom:7px}
+  .board,.row{gap:5px}
+  .keyboard{margin-top:11px}
+  .key{height:47px}
+}
+
+
+
+/* ============================================================
+   CoPilot-inspired visual skin
+   Visual-only overrides: typography, header graphics, tiles,
+   and on-screen keyboard. Game logic and word data are unchanged.
+   ============================================================ */
+:root{
+  --font:'Segoe UI','Helvetica Neue',Arial,sans-serif;
+  --correct:#6aaa64;
+  --present:#c9b458;
+  --absent:#787c7e;
+  --line:#3a3a3c;
+}
+body,
+button,
+input{
+  font-family:var(--font);
+}
+
+/* Use the cleaner, slightly heavier line treatment from the reference UI. */
+.icon-btn svg{
+  width:22px;
+  height:22px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:2.2;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+
+/* Reference-style board geometry and lettering. */
+.board{
+  gap:5px;
+}
+.row{
+  gap:5px;
+}
+.tile{
+  border:2px solid #3a3a3c;
+  border-radius:4px;
+  background:#121213;
+  font-size:calc(var(--tile) * .46);
+  font-weight:800;
+  letter-spacing:1px;
+  transition:border-color .12s ease,background .12s ease,color .12s ease;
+}
+.tile.filled{
+  border-color:#818384;
+  background:#121213;
+}
+.tile.correct,
+.tile.present,
+.tile.absent{
+  color:#fff;
+}
+.mini{
+  border-radius:3px;
+  font-weight:800;
+}
+
+/* Reference-style compact keyboard. */
+.keyboard{
+  width:min(100%,500px);
+  margin-top:18px;
+  padding:8px 6px 16px;
+  gap:6px;
+}
+.key-row{
+  gap:5px;
+}
+.key{
+  height:58px;
+  min-width:36px;
+  max-width:44px;
+  padding:0 6px;
+  border:0;
+  border-radius:4px;
+  background:#818384;
+  color:#fff;
+  font-size:.78rem;
+  font-weight:700;
+  letter-spacing:0;
+  box-shadow:none;
+  transition:background .12s ease,color .12s ease,transform .08s ease;
+}
+.key:hover{
+  background:#919394;
+  filter:none;
+}
+.key:active{
+  transform:scale(.93);
+}
+.key.wide{
+  min-width:56px;
+  max-width:66px;
+  font-size:.70rem;
+}
+.key.correct,
+.key.present,
+.key.absent{
+  color:#fff;
+}
+.key.absent{
+  background:var(--absent);
+  color:#fff;
+}
+
+@media(max-width:360px){
+  .key{
+    height:50px;
+    min-width:30px;
+  }
+  .key.wide{
+    min-width:48px;
+  }
+}
+@media(min-height:800px){
+  .key{
+    height:62px;
+  }
+}
+
+
+
+/* ============================================================
+   v1.8 state-color repair
+   Keep the v1.7 one-row mobile header, but force submitted
+   tile and keyboard states to remain visible after the visual
+   skin/responsive overrides. Visual-only CSS.
+   ============================================================ */
+.tile.correct,
+.tile[data-state="correct"]{
+  background:var(--correct) !important;
+  border-color:var(--correct) !important;
+  color:#fff !important;
+}
+.tile.present,
+.tile[data-state="present"]{
+  background:var(--present) !important;
+  border-color:var(--present) !important;
+  color:#fff !important;
+}
+.tile.absent,
+.tile[data-state="absent"]{
+  background:var(--absent) !important;
+  border-color:var(--absent) !important;
+  color:#fff !important;
+}
+.key.correct,
+.key[data-state="correct"]{
+  background:var(--correct) !important;
+  color:#fff !important;
+}
+.key.present,
+.key[data-state="present"]{
+  background:var(--present) !important;
+  color:#fff !important;
+}
+.key.absent,
+.key[data-state="absent"]{
+  background:var(--absent) !important;
+  color:#fff !important;
+}
+.high-contrast .tile.present,
+.high-contrast .tile[data-state="present"],
+.high-contrast .key.present,
+.high-contrast .key[data-state="present"]{
+  color:#091018 !important;
+}
+.mini.correct{background:var(--correct) !important;border-color:var(--correct) !important;color:#fff !important}
+.mini.present{background:var(--present) !important;border-color:var(--present) !important;color:#fff !important}
+.mini.absent{background:var(--absent) !important;border-color:var(--absent) !important;color:#fff !important}
+.result-swatch.correct,
+.result-sq.correct,
+.result-sq[data-state="correct"]{background:var(--correct) !important}
+.result-swatch.present,
+.result-sq.present,
+.result-sq[data-state="present"]{background:var(--present) !important}
+.result-swatch.absent,
+.result-sq.absent,
+.result-sq[data-state="absent"]{background:var(--absent) !important}
+
+
+
+/* ============================================================
+   v1.9 functional polish
+   - Keep the mobile header in one row while centering Daily/Practice.
+   - Make keyboard state classes and data-state attributes visually identical.
+   - Style the offline download link as a real settings action.
+   ============================================================ */
+.download-offline-btn{
+  display:grid;
+  place-items:center;
+  text-align:center;
+  text-decoration:none;
+}
+@media(max-width:540px){
+  header{
+    grid-template-columns:minmax(70px,1fr) auto minmax(94px,1fr);
+  }
+  .brand{justify-self:start;}
+  .mode-switch{
+    justify-self:center;
+    justify-content:center;
+  }
+  .header-actions{
+    justify-self:end;
+    min-width:94px;
+    justify-content:flex-end;
+  }
+}
+@media(max-width:380px){
+  header{
+    grid-template-columns:minmax(58px,1fr) auto minmax(88px,1fr);
+  }
+  .header-actions{min-width:88px;}
+}
+.key.correct,
+.key[data-state="correct"]{
+  background:var(--correct) !important;
+  color:#fff !important;
+}
+.key.present,
+.key[data-state="present"]{
+  background:var(--present) !important;
+  color:#fff !important;
+}
+.key.absent,
+.key[data-state="absent"]{
+  background:var(--absent) !important;
+  color:#fff !important;
+}
+.high-contrast .key.present,
+.high-contrast .key[data-state="present"]{
+  color:#091018 !important;
+}
+
+</style>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%234f46e5'/><text y='.9em' font-size='72' x='12' fill='white' font-family='Arial Black,sans-serif' font-weight='900'>N</text></svg>">
+</head>
+<body>
+<div class="app">
+<header>
+  <div class="brand"><div class="logo" aria-hidden="true">N</div><div class="brand-text"><strong>Nictionary</strong><span>Offline word game</span></div></div>
+  <div class="mode-switch" role="group" aria-label="Game mode">
+    <button class="mode-btn active" id="dailyMode" aria-pressed="true">Daily</button><button class="mode-btn" id="practiceMode" aria-pressed="false">Practice</button>
+  </div>
+  <div class="header-actions">
+    <button class="icon-btn" id="helpBtn" aria-label="How to play"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg></button>
+    <button class="icon-btn" id="statsBtn" aria-label="Statistics"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="18" y1="20" x2="18" y2="10"/>
+          <line x1="12" y1="20" x2="12" y2="4"/>
+          <line x1="6"  y1="20" x2="6"  y2="14"/>
+        </svg></button>
+    <button class="icon-btn" id="headerShareBtn" aria-label="Share result" title="Share result"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="18" cy="5" r="3"/>
+          <circle cx="6"  cy="12" r="3"/>
+          <circle cx="18" cy="19" r="3"/>
+          <line x1="8.59"  y1="13.51" x2="15.42" y2="17.49"/>
+          <line x1="15.41" y1="6.51"  x2="8.59"  y2="10.49"/>
+        </svg></button>
+    <button class="icon-btn" id="settingsBtn" aria-label="Settings"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg></button>
+  </div>
+</header>
+<main>
+  <div class="game-meta"><div class="puzzle-label"><span class="pill" id="puzzlePill">Daily #1</span><span id="statusText">6 tries</span></div><div class="streak" id="streakText">🔥 0</div></div>
+  <div class="board" id="board" role="grid" aria-label="Nictionary guesses"></div>
+  <div class="keyboard" id="keyboard" aria-label="On-screen keyboard"></div>
+</main>
+<footer>Five letters. Six tries. Entirely offline.</footer>
+</div>
+<div class="toast-stack" id="toasts" aria-live="polite"></div>
+
+<div class="overlay" id="helpModal" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+ <div class="modal"><div class="modal-head"><h2 id="helpTitle">How to play</h2><button class="close" data-close="helpModal" aria-label="Close">×</button></div>
+ <p>Guess the hidden five-letter word in six tries. Each guess must be a valid word. After each guess, the tiles show how close you are.</p>
+ <div class="rule"><div class="example"><div class="mini correct">N</div><div class="mini">O</div><div class="mini">T</div><div class="mini">E</div><div class="mini">S</div></div><strong>N</strong> is in the word and in the correct spot.</div>
+ <div class="rule"><div class="example"><div class="mini">B</div><div class="mini present">R</div><div class="mini">A</div><div class="mini">I</div><div class="mini">N</div></div><strong>R</strong> is in the word but in a different spot.</div>
+ <div class="rule"><div class="example"><div class="mini">C</div><div class="mini">L</div><div class="mini">O</div><div class="mini absent">U</div><div class="mini">D</div></div><strong>U</strong> is not in the word.</div>
+ <p><strong>Daily</strong> gives everyone one fixed puzzle per calendar day. <strong>Practice</strong> gives you unlimited random puzzles.</p><p>Solutions come from a carefully curated pool of familiar words. The accepted guess list is intentionally broader.</p>
+ <p class="disclaimer">Nictionary is an independent, locally stored game. It is not affiliated with Wordle or The New York Times.</p>
+ </div>
+</div>
+
+<div class="overlay" id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+ <div class="modal"><div class="modal-head"><h2 id="settingsTitle">Settings</h2><button class="close" data-close="settingsModal" aria-label="Close">×</button></div>
+ <div class="setting"><div><strong>Hard mode</strong><span>Revealed hints must be used in later guesses.</span></div><label class="switch"><input type="checkbox" id="hardMode"><span class="slider"></span></label></div>
+ <div class="setting"><div><strong>High contrast</strong><span>Uses orange and blue with shape markers.</span></div><label class="switch"><input type="checkbox" id="contrastMode"><span class="slider"></span></label></div>
+ <div class="setting"><div><strong>Reduce motion</strong><span>Minimizes flips, shakes, and bounce effects.</span></div><label class="switch"><input type="checkbox" id="motionMode"><span class="slider"></span></label></div>
+ <div class="settings-section"><h3>Backup &amp; restore</h3><p>Export settings, progress, and statistics to a small JSON backup file, or restore a previous backup.</p><div class="data-actions"><button class="secondary" id="exportDataBtn">Export save data</button><button class="secondary" id="importDataBtn">Import save data</button></div><input class="file-input" type="file" id="importFile" accept="application/json,.json"></div>
+ <div class="settings-section"><h3>Offline copy</h3><p>Download a self-contained HTML copy that can be opened without internet access.</p><div class="data-actions"><a class="secondary download-offline-btn" href="Nictionary_Offline.html" download="Nictionary_Offline.html">Download offline version</a></div></div>
+ <button class="danger" id="clearDataBtn">Clear all saved progress</button>
+ </div>
+</div>
+
+<div class="overlay" id="statsModal" role="dialog" aria-modal="true" aria-labelledby="statsTitle">
+ <div class="modal"><div class="modal-head"><h2 id="statsTitle">Your stats</h2><button class="close" data-close="statsModal" aria-label="Close">×</button></div>
+ <div class="stats-tabs" role="tablist" aria-label="Statistics view"><button class="stats-tab active" data-stats-view="daily" role="tab" aria-selected="true">Daily</button><button class="stats-tab" data-stats-view="practice" role="tab" aria-selected="false">Practice</button><button class="stats-tab" data-stats-view="combined" role="tab" aria-selected="false">Combined</button></div>
+ <div class="stats-grid"><div class="stat"><b id="playedStat">0</b><span id="playedLabel">Played</span></div><div class="stat"><b id="winStat">0</b><span id="winLabel">Win %</span></div><div class="stat"><b id="streakStat">0</b><span id="streakLabel">Streak</span></div><div class="stat"><b id="maxStat">0</b><span id="maxLabel">Best</span></div></div>
+ <p class="stats-note" id="statsNote"></p><h3>Guess distribution</h3><div class="dist" id="distribution"></div>
+ <button class="primary" id="shareStatsBtn">Share current result</button>
+ </div>
+</div>
+
+<div class="overlay" id="endModal" role="dialog" aria-modal="true" aria-labelledby="endTitle">
+ <div class="modal end-card"><div class="modal-head"><h2 id="endTitle">Puzzle complete</h2><button class="close" data-close="endModal" aria-label="Close">×</button></div>
+ <div class="answer" id="answerText">WORDS</div><p class="message" id="endMessage"></p>
+ <div class="share-preview" id="sharePreview" aria-label="Share result grid" role="img"></div>
+ <button class="primary" id="shareBtn">Share result</button><button class="secondary" id="nextBtn">New practice game</button><p class="next-note" id="nextNote"></p>
+ </div>
+</div>
+
+<div class="overlay" id="shareModal" role="dialog" aria-modal="true" aria-labelledby="shareTitle">
+ <div class="modal end-card"><div class="modal-head"><h2 id="shareTitle">Share result</h2><button class="close" data-close="shareModal" aria-label="Close">×</button></div>
+ <p>Choose how you would like to share your completed Nictionary result.</p>
+ <div class="share-preview" id="shareModalPreview" aria-label="Share result grid preview" role="img"></div>
+ <div class="share-actions">
+  <button class="primary" id="nativeShareBtn">Share via device</button>
+  <button class="secondary" id="copyShareBtn">Copy to clipboard</button>
+ </div>
+ </div>
+</div>
+
+<script>
+"use strict";
+const ANSWERS=["aback","abode","abort","about","above","abuse","abyss","acorn","actor","acute","adage","adapt","adept","adieu","admit","adopt","adore","adorn","adult","afoot","after","again","agate","agent","agile","aging","agony","agree","ahead","aisle","alarm","album","alder","alert","algae","alias","alibi","alien","align","alike","alive","alley","allot","allow","alloy","aloft","alone","along","aloof","aloud","alpha","altar","alter","amass","amaze","amber","amend","amino","amiss","amity","among","amped","ample","amuse","angel","anger","angle","angry","angst","ankle","annex","annoy","anode","anvil","aorta","apart","apnea","apple","apply","apron","arbor","arena","argue","arise","armed","armor","aroma","arose","array","arrow","arson","artsy","ascot","aside","aspen","assay","asset","aster","atlas","atoll","atone","attic","audio","audit","auger","aunty","aural","avail","avert","avian","avoid","await","awake","award","aware","awash","awful","awoke","axiom","azure","bacon","badge","badly","bagel","baker","banal","banjo","barge","baron","basal","basic","basil","basin","basis","batch","bathe","batty","beach","beard","beast","beech","began","begin","begun","belle","belly","below","bench","beret","berry","berth","beset","bezel","billy","binge","bingo","birch","birth","bison","black","blade","blame","bland","blank","blast","blaze","bleak","blend","bless","blimp","blind","blink","blitz","block","blood","bloom","blown","bluff","blunt","blush","board","bobby","bongo","boost","booth","borne","bound","brace","brain","brake","brand","brash","brave","bravo","bread","break","breed","briar","brick","brief","brine","bring","brink","brisk","broad","broke","brood","brown","brunt","brush","build","built","bumpy","burnt","buyer","cabal","cable","cacao","cache","cacti","caddy","cadet","cairn","camel","cameo","canal","candy","canoe","canon","caper","carat","cargo","carol","carry","carve","caste","catch","cater","cause","chain","chair","champ","chant","chaos","charm","chart","chase","chasm","cheap","cheat","check","cheek","cheer","chess","chest","chick","chief","child","chili","chill","chime","chimp","chirp","chock","choir","choke","chord","chore","chose","chuck","chump","chunk","churn","chute","cider","cigar","circa","civic","civil","claim","clamp","clash","class","clean","clear","cleft","click","cliff","climb","cling","clock","close","cloth","cloud","clout","coach","coast","cocoa","colon","color","combo","comfy","comic","comma","conch","coral","corps","couch","cough","could","count","court","coven","craft","cramp","crane","crank","crash","crass","crate","crave","crazy","cream","creek","creme","crick","crime","crisp","crowd","crown","crude","crumb","crush","crust","crypt","cumin","cupid","curse","curve","cycle","cynic","daily","dairy","daisy","dance","dazed","dealt","death","debit","debut","decay","decor","decoy","defer","delay","delta","demon","denim","dense","depot","depth","derby","deter","detox","deuce","devil","diary","digit","dimly","diner","dingo","dingy","diode","dirty","disco","ditch","ditto","diver","dizzy","dodge","dodgy","doggy","dogma","donor","doubt","dozen","draft","drama","drank","drawn","dread","dream","dress","dried","drill","drink","drive","drone","drove","drown","druid","drunk","dummy","dusty","dwarf","dying","eager","eagle","early","earth","eaten","eater","ebony","edict","eerie","eight","eject","elbow","elder","elect","elite","elude","embed","ember","empty","enact","enemy","enjoy","ensue","enter","entry","envoy","epoch","epoxy","equal","equip","erase","erect","erode","error","erupt","essay","ester","ether","ethic","evade","event","every","evict","evoke","exact","excel","exert","exile","exist","expel","extra","fable","facet","faint","fairy","faith","false","fancy","farce","fatal","fault","fauna","favor","feast","femur","fence","fetal","fetch","fever","fewer","fiber","field","fiend","fifth","fifty","fight","filet","filly","filth","final","finch","finer","first","fishy","fixer","fizzy","fjord","flack","flair","flake","flame","flank","flare","flash","flask","fleet","flesh","flick","flier","fling","flint","flirt","float","flock","flood","floor","flora","floss","flour","flown","fluff","fluid","fluke","flume","flush","flute","focal","focus","foggy","folio","folly","foray","force","forge","forgo","forte","forth","forty","forum","found","foyer","frail","frame","fraud","freak","freer","fresh","friar","fried","frisk","frock","front","frost","froth","frown","froze","fruit","fudge","fully","fungi","funky","funny","furry","fussy","fuzzy","gamma","gauge","gecko","geeky","geese","genre","ghost","ghoul","giant","giddy","girly","given","giver","glade","gland","glare","glass","glaze","gleam","glide","globe","gloom","glory","gloss","glove","gnome","godly","golem","goody","gooey","goose","gorge","grace","grade","graft","grail","grain","grand","grant","grape","graph","grasp","grass","grate","grave","gravy","great","greed","green","greet","grief","grill","grime","grimy","grind","gripe","groan","groin","groom","gross","group","grout","grove","growl","grown","gruff","grunt","guard","guess","guest","guide","guild","guile","guilt","guise","gulch","gully","gusto","habit","hairy","handy","happy","hardy","harry","harsh","haste","hasty","hatch","hater","haunt","haven","hazel","heady","heard","heart","heath","heave","heavy","hedge","hefty","heist","helix","hello","hence","heron","hilly","hinge","hippy","hitch","hoard","hobby","hoist","holly","homer","honey","honor","horde","horse","hotel","hound","house","hover","howdy","human","humid","humor","hunch","hurry","husky","hyena","icing","ideal","image","inbox","index","inert","inner","input","irony","issue","ivory","jaded","jazzy","jelly","jewel","joint","joker","jolly","judge","juice","jumbo","kappa","karma","kayak","kiosk","knack","known","koala","label","lance","lapse","large","laser","latch","later","lathe","laugh","layer","leach","leapt","learn","lease","leash","least","leave","lefty","legal","lemon","level","lever","libel","light","lilac","limbo","limit","linen","lingo","liver","livid","lobby","local","lodge","logic","loose","loser","lousy","lover","lower","loyal","lucid","lucky","lumen","lunar","lunch","lying","macho","magic","magma","major","maker","mambo","mango","manor","maple","march","marry","marsh","match","maxim","maybe","mayor","meant","meaty","media","melon","mercy","merge","merit","merry","messy","metal","meter","metro","midst","might","mimic","minor","minus","mixed","mixer","mocha","modal","model","money","month","moral","motel","motto","mound","mount","mouse","mouth","movie","munch","mushy","music","nadir","nanny","nappy","naval","navel","nerve","never","newer","newly","niche","night","ninja","noble","noise","north","novel","nudge","nurse","nylon","nymph","oasis","obese","occur","ocean","offer","often","olden","older","olive","omega","opera","optic","orbit","order","organ","other","otter","ought","outer","owner","oxide","paint","palsy","panda","panel","panic","paper","parse","party","pasta","paste","patch","patio","patsy","pause","peace","peach","pearl","pedal","penny","perch","pesto","petal","phase","phone","photo","piano","piece","pilot","pinky","pique","pitch","pivot","pixie","pizza","place","plaid","plain","plane","plank","plant","plate","plaza","plead","pluck","plumb","plume","plush","point","poker","polar","poppy","porch","pouch","pound","power","prank","press","price","pride","prime","print","prior","prism","privy","prize","probe","prone","proof","prose","proud","prove","puffy","pulse","punch","pupil","puppy","purse","pushy","quack","quail","quake","quark","quart","quash","queen","query","quest","queue","quick","quiet","quill","quilt","quirk","quite","quote","rabid","racer","radar","radio","raise","rally","ranch","range","rapid","ratio","raven","reach","react","ready","realm","rebel","refer","regal","relax","relay","relic","remit","repay","repel","reply","reset","resin","retro","rhino","rhyme","rider","ridge","rifle","right","risen","river","robin","rocky","rogue","rouge","rough","round","rouse","route","royal","rugby","ruler","rumor","runny","rural","saber","sable","safer","salad","salon","salsa","salty","sandy","sassy","satin","sauce","savor","scale","scant","scare","scary","scene","scoff","scope","score","scout","scrap","screw","seedy","sense","serve","seven","sever","shade","shady","shaft","shake","shall","shame","shank","shape","shard","share","shark","sharp","shave","shear","sheep","sheet","shelf","shell","shift","shine","shirt","shock","shone","shoot","shore","short","shout","shown","shrew","siege","sight","sigma","silly","since","sixth","skill","skirt","skunk","slant","slate","slave","sleek","sleep","slice","slick","slide","slime","slimy","sling","sloop","slope","slump","slung","smack","small","smart","smash","smelt","smile","smirk","smoke","snack","snake","sneak","snoop","snout","solar","solid","solve","sonic","sorry","sound","south","space","spade","spank","spare","spark","spasm","speak","spear","speed","spend","spent","spike","spilt","spine","spire","split","spoil","spoke","spoof","spook","spool","spore","sport","spray","spurt","squad","stack","staff","stage","stake","stale","stalk","stall","stamp","stand","stank","stare","stark","start","stash","state","steal","steam","steel","steep","stern","stick","still","stink","stock","stomp","stone","stood","stool","store","stork","storm","story","stout","stove","strap","stray","strip","strut","stuck","study","stuff","stunt","style","sugar","suite","sunny","super","surge","sushi","swamp","swarm","swath","sweat","sweep","sweet","swell","swept","swift","swing","swipe","swoop","sword","sworn","syrup","table","taboo","tacit","taken","tango","taper","tarot","taser","taste","tasty","taunt","teach","teary","teeth","tempo","tenet","tenor","tense","thank","theft","their","theme","there","these","theta","thick","thief","thine","thing","think","third","thong","those","three","threw","throw","thumb","thump","thyme","tibia","tidal","tiger","tight","timer","timid","tired","tithe","title","toast","today","token","tonal","tonic","tooth","topaz","topic","total","touch","tough","towel","tower","toxic","toxin","trace","track","tract","trade","trail","train","trait","tramp","trash","treat","trend","trial","tribe","trick","tried","trite","troll","troop","trove","truce","truck","truly","trunk","trust","truth","tulip","tummy","tumor","tuner","tunic","turbo","tutor","tweak","twice","twine","twist","tying","uncle","under","undue","union","unite","unity","until","upper","upset","urban","usage","usher","usual","utter","vague","valet","valid","valor","value","valve","vapor","vault","venom","venue","verge","verse","verve","vigor","villa","vinyl","viola","virus","visit","vista","vital","vivid","vixen","vocal","voice","vomit","voter","vouch","vowel","wagon","waist","waltz","waste","watch","water","weary","weigh","weird","whale","wharf","wheat","wheel","where","which","whiff","while","whisk","white","whole","whose","wider","widow","width","wired","wiser","witch","witty","woman","women","woody","world","worry","worse","worst","worth","would","wound","wrath","wreak","wreck","wrist","write","wrong","wrote","xenon","yacht","yeast","yield","young","youth","yummy","zebra"];
+// Fixed sequence v1: keep this order stable when future words are added.
+const DAILY_SEQUENCE=["dingy","apnea","sever","elder","messy","curse","breed","mango","optic","smelt","whale","wired","toast","banjo","cider","fussy","flair","below","snake","cheek","timer","ninja","topaz","cloud","resin","faith","diner","since","amass","model","carat","south","rocky","awoke","gruff","whisk","anger","camel","brood","pause","focal","slide","basin","agree","wound","large","touch","tasty","attic","karma","scoff","trail","dogma","fancy","epoch","chord","input","begin","prime","sight","borne","enemy","dairy","lousy","solid","metro","react","spare","sworn","berth","punch","spoof","inert","tenor","token","fifth","guilt","haste","tense","other","grout","pulse","north","flock","chock","aorta","pizza","lobby","cigar","delay","brand","never","grunt","flute","robin","crude","eight","ascot","inbox","acorn","voter","clean","reply","verve","twist","hazel","about","steel","stunt","flint","funky","dingo","close","bench","decoy","flood","third","chart","filly","scare","tulip","creek","panic","queen","vapor","hello","human","cliff","fauna","swoop","theft","house","aback","nadir","reach","piece","craft","delta","shade","speak","merge","chirp","hedge","crowd","chunk","orbit","furry","belle","album","rouse","chimp","ahead","drink","heave","bound","stalk","small","liver","rhino","diode","allot","tweak","alibi","cycle","slump","maybe","short","harry","phone","swing","grind","hatch","boost","story","burnt","blimp","harsh","exact","sixth","privy","align","charm","abort","jewel","fever","blind","witch","visit","wagon","raven","grail","lease","irony","basal","guide","caper","armor","thick","beach","jelly","avian","enter","poker","early","click","title","cable","decay","guile","stick","cling","beard","scant","trunk","tumor","grade","crisp","spilt","feast","sugar","maxim","anvil","knack","zebra","brink","might","gland","score","spine","array","heard","prism","crate","rogue","tonal","shift","hover","olive","fluke","drunk","trick","fruit","circa","elite","sound","groom","legal","wheat","slave","grant","lever","smile","quash","algae","sonic","chose","racer","river","fewer","spook","brunt","color","flare","storm","twice","purse","thong","slope","relic","savor","thyme","glory","goose","foggy","candy","mimic","armed","print","chaos","flask","teeth","thump","tuner","claim","ranch","birth","pesto","navel","shown","groan","defer","fudge","under","false","gleam","table","begun","quest","prove","steal","court","venom","lunch","tummy","facet","seven","badly","couch","safer","power","shone","fried","scrap","towel","alarm","aware","truth","strap","tutor","solar","frost","chasm","avert","flirt","sassy","frock","newer","mouth","geeky","femur","runny","chuck","sling","viola","bland","crank","clash","hence","route","stork","eager","gauge","dodgy","build","foray","adore","ethic","aloft","sheep","gulch","aisle","choke","slick","lemon","fight","tramp","panda","party","daily","dress","theta","tonic","stove","alias","which","brave","probe","treat","jaded","drawn","layer","arena","woody","thief","denim","elbow","fuzzy","bravo","black","ideal","salsa","bagel","watch","stack","state","wreck","dance","handy","flick","after","juice","timid","vouch","guess","baron","conch","awake","rifle","valet","climb","husky","train","least","drown","label","entry","stash","hotel","bezel","assay","elude","quart","shame","blast","whose","steam","creme","frisk","teach","petal","tunic","anode","ester","stake","adopt","raise","angel","fling","banal","munch","abode","canon","otter","plaid","yacht","stout","vivid","grace","plead","award","gloss","coven","mound","nurse","comic","utter","aside","chess","stomp","devil","plain","mushy","lucky","vital","hilly","adept","dense","squad","gross","adage","prior","union","lumen","evade","latch","shall","awash","usual","swipe","chill","scene","kayak","gravy","billy","write","white","await","thing","canal","wharf","hater","spade","would","alien","relax","auger","excel","alert","broke","cramp","taken","salad","tenet","fishy","brine","heady","afoot","magma","sharp","witty","choir","blood","board","cabal","batch","smoke","stamp","freer","goody","growl","blush","asset","sushi","binge","sorry","gooey","beech","focus","quack","tiger","lapse","howdy","honor","nerve","extra","skirt","taser","sweet","belly","query","dizzy","vigor","study","voice","smirk","erase","angry","depot","trait","expel","valid","spurt","carol","slung","hardy","flown","dusty","weigh","drank","dealt","jumbo","eater","oasis","libel","aspen","could","plaza","chute","brain","mixer","ensue","humor","flesh","chick","apple","screw","pasta","toxic","porch","lathe","lefty","icing","peach","laser","stage","pound","civic","upper","fraud","godly","alter","adieu","nylon","where","crown","horse","apart","moral","poppy","dazed","pride","groin","hasty","doggy","folly","aroma","motto","think","sandy","tacit","loser","shave","grand","slime","plush","minor","alloy","yield","greed","exist","saber","start","champ","apply","essay","chump","tango","waste","unity","pearl","shelf","gnome","minus","cumin","bring","finer","xenon","forge","cough","polar","total","among","count","error","cater","alpha","lover","folio","there","world","split","spool","older","serve","floor","gamma","rugby","loose","level","agile","worry","grass","nymph","cheat","mount","aunty","proof","lodge","taste","frail","float","lance","bongo","spoke","oxide","later","urban","dirty","flora","class","patio","limbo","cacao","shark","sense","round","erupt","sloop","fluid","corps","refer","basic","eject","fiber","tempo","brace","troop","penny","along","glass","stock","event","width","whole","phase","axiom","pilot","skill","metal","green","donor","sweep","churn","slant","laugh","peace","digit","fable","wreak","trite","scale","puppy","money","comma","ditch","crumb","forty","aging","fetch","humid","drive","ether","amuse","bleak","grove","diary","salon","those","sable","nanny","uncle","villa","tower","smack","colon","joker","erode","guise","geese","tithe","radar","unite","track","point","wrath","clock","gecko","remit","alive","cairn","merit","gully","homer","doubt","undue","embed","crass","bacon","habit","plumb","wheel","honey","rouge","rumor","rough","final","skunk","enact","curve","these","azure","spark","tired","nappy","today","lucid","sword","envoy","piano","risen","cupid","atoll","block","haunt","tried","super","quill","amity","patsy","holly","crust","slate","booth","shaft","front","sheet","berry","drama","avoid","stool","blank","stink","stark","trace","child","trend","paper","quite","snout","vista","gloom","swept","drone","turbo","widow","dwarf","tidal","leave","flame","issue","flier","deter","check","woman","realm","eerie","chair","horde","fjord","niche","store","glare","taper","happy","acute","farce","their","dummy","topic","bobby","shape","media","meant","three","group","reset","grasp","throw","shard","judge","regal","photo","stand","stood","wrong","parse","carry","mouse","strut","every","brisk","swarm","ready","enjoy","blown","spore","adorn","beret","chase","lower","cheap","range","tough","elect","sigma","chain","alley","solve","logic","evict","basis","relay","arose","cleft","usher","fungi","angst","equal","truce","heist","draft","snack","heath","frame","forth","haven","agate","flour","hairy","amber","pupil","midst","shock","artsy","seedy","trade","water","jazzy","paste","quote","index","scary","mercy","blame","trust","noble","wider","spear","coral","annoy","leach","perch","ocean","cocoa","speed","flush","beset","empty","pivot","loyal","audit","young","aloud","flank","gripe","cloth","quail","teary","comfy","olden","stuck","chief","noise","prank","arrow","cadet","usage","began","weird","radio","glide","argue","prone","abyss","drove","syrup","freak","brief","epoxy","agony","spend","stale","surge","flake","wrist","blaze","grime","pedal","crave","ivory","women","birch","dried","yummy","worse","fizzy","shake","match","ditto","livid","heavy","wrote","cynic","blitz","clout","crypt","bread","adult","disco","pushy","deuce","whiff","value","alder","troll","earth","movie","shrew","forum","style","quake","venue","marsh","equip","brake","smart","shank","alike","brush","known","stall","lunar","scout","vowel","glove","dread","demon","aster","toxin","queue","inner","hefty","canoe","tooth","angle","actor","bison","alone","pouch","great","annex","mocha","waist","cameo","sleek","fluff","genre","rapid","novel","clear","giant","flume","swift","snoop","found","pluck","tibia","grown","above","strip","ruler","organ","bluff","share","blink","night","until","thumb","swell","hound","vomit","quick","tying","helix","often","ghost","fixer","altar","hinge","sunny","vault","space","globe","graph","fleet","guest","plane","frown","local","filet","grain","taboo","civil","cacti","coach","cache","crime","blade","blend","repay","fetal","ratio","arson","stray","floss","obese","greet","stank","worst","shoot","proud","finch","lingo","combo","diver","again","erect","dimly","hoist","rider","ebony","basil","plate","stern","salty","crush","chili","exert","month","scope","swamp","shell","plume","grave","batty","vague","silly","amend","owner","arise","caste","shine","coast","amped","motel","nudge","puffy","tribe","glade","virus","bloom","fence","magic","ember","sweat","kappa","pique","yeast","stare","decor","chant","exile","press","rabid","mixed","ghoul","maple","stuff","truly","while","drill","cheer","maker","cause","bingo","theme","lilac","music","hyena","gorge","sneak","clamp","shore","trash","amiss","sport","catch","field","beast","cream","pixie","awful","aural","still","crash","buyer","giddy","koala","sleep","offer","atlas","thine","staff","brash","truck","ought","rhyme","outer","froze","break","prize","valor","paint","hobby","learn","dying","rally","ridge","fully","twine","dream","amino","meter","steep","upset","caddy","forte","admit","trial","linen","girly","shirt","tarot","suite","forgo","built","fifty","grief","royal","abuse","hurry","daisy","heart","grill","amaze","eaten","joint","eagle","fault","baker","given","newly","opera","chime","foyer","flack","avail","broad","detox","bless","quiet","place","verse","depth","druid","siege","satin","filth","shout","evoke","trove","plant","froth","tract","swath","golem","funny","dozen","edict","faint","image","rural","occur","vinyl","debit","sauce","agent","blunt","shear","crick","prose","guild","arbor","youth","repel","right","mambo","merry","omega","debut","grate","friar","brick","fatal","plank","spray","spoil","lying","ample","cargo","hoard","melon","apron","march","thank","threw","audio","glaze","adapt","chest","chore","shady","guard","spike","smash","verge","tight","pinky","manor","kiosk","stone","barge","slice","crazy","wiser","hunch","valve","marry","grape","jolly","death","slimy","dodge","bumpy","crane","leapt","spire","vocal","spasm","naval","limit","light","order","briar","worth","spent","brown","price","palsy","flash","gusto","pitch","graft","derby","fiend","spank","badge","retro","patch","atone","fairy","ankle","quilt","aloof","hippy","weary","bathe","quirk","giver","carve","meaty","rebel","panel","grimy","taunt","vixen","allow","waltz","macho","mayor","fresh","modal","favor","first","hitch","force","heron","quark","leash","major"];
+const VALID_WORDS=new Set(["aaaah","aaand","aadmi","aalto","aamir","aaron","aarti","ababa","aback","abadi","abase","abate","abaya","abbas","abbey","abbie","abbot","abdel","abdul","abdur","abell","abhay","abhor","abide","abies","abled","abner","abney","abode","aboot","abort","about","above","abram","abreu","abuja","abuse","abuts","abuzz","abyss","accel","acces","accor","accra","accts","ached","aches","acids","acker","acorn","acres","acrid","acted","actin","acton","actor","acura","acute","adage","adair","adama","adams","adana","adani","adapt","added","adder","addie","addis","addle","addon","adela","adele","adept","adieu","adina","adios","aditi","adlai","adler","adlib","admin","admit","adnan","adobe","adolf","adopt","adora","adore","adorn","adria","adult","advil","aedes","aegis","aegon","aeons","aerie","aesop","aetna","afaik","affix","afire","afoot","afore","afoul","afrin","after","afton","afzal","again","agape","agata","agate","agave","agent","agers","agger","aggie","aggro","agile","aging","aglow","agnes","agnew","agony","agora","agree","agron","aguas","agung","ahaha","ahead","ahern","ahhhh","ahmad","ahmed","ahmet","ahold","ahora","ahram","ahrar","ahsan","aidan","aided","aiden","aider","aides","aight","aiims","aiken","ailes","ailsa","aimed","aimee","aimer","ainge","aioli","aipac","aired","aires","aisha","aisle","ajayi","ajith","ajmal","ajmer","akagi","akali","akane","akari","akash","akbar","akeem","akers","akiba","akiko","akira","akita","akmal","akram","akron","aksel","akuma","alaba","alain","alamo","alana","alarm","alban","albee","albie","albin","album","albus","alcan","alcoa","alden","alder","aldon","aleck","aleks","alena","alene","aleph","alert","alexa","alexi","alfie","algae","algal","algas","alger","alias","alibi","alice","alien","align","alike","alina","aline","alisa","alito","alive","aliya","alkyl","allah","allan","allay","allen","aller","alles","alley","allez","allie","allin","allis","alloa","allot","allow","alloy","allyn","aloes","aloft","aloha","alois","alola","alone","along","aloof","aloud","alpes","alpha","alsop","altaf","altai","altar","alter","altho","alton","altos","alums","alves","alvin","alway","alwyn","amado","amana","amani","amano","amara","amare","amari","amaro","amass","amato","amaya","amaze","amber","ambit","amble","amboy","ameen","ameer","amell","amend","ameri","amery","amgen","amici","amico","amida","amide","amiga","amigo","amina","amine","amino","aminu","amira","amiri","amish","amiss","amity","amjad","amman","ammar","ammon","among","amore","amory","amour","amped","ample","amply","amrit","amuse","amway","anais","anand","anaya","anbar","ander","andes","andie","andor","andra","andre","andro","anent","angel","anger","angie","angle","anglo","angry","angst","angus","anhui","anika","anile","anima","anime","anion","anise","anish","anita","anjou","anker","ankle","annan","annas","annes","annex","annie","annoy","annul","annum","anode","anova","ansar","ansel","anson","antar","antes","antic","antis","anton","antsy","antti","anvil","anwar","anzac","anzio","aoife","aorta","apace","apart","aphex","aphid","aphis","aping","apnea","appel","apple","apply","april","apron","aptly","aqaba","arabi","arabs","araki","arash","arbor","arced","archy","arden","ardor","areal","areas","arena","arent","argan","argon","argos","argue","argus","arial","arian","arias","arica","ariel","aries","arima","arise","arius","ariza","arjen","arjun","arkin","arlen","arles","arman","armas","armed","armes","armin","armor","arndt","arnie","aroma","arora","arose","arran","arras","array","arron","arrow","arryn","arsed","arsen","arses","arson","artem","artes","artic","artie","artis","artsy","artur","aruba","aruna","arvin","arwen","arxiv","aryan","asada","asahi","asami","asana","asano","asaph","asari","ascap","ascii","ascot","asean","ashby","ashen","asher","ashes","ashok","asian","asics","aside","asked","askew","askin","aslam","aslan","aspca","aspen","assad","assam","assay","assed","asses","asset","assis","assoc","aster","astin","aston","astor","astra","astro","asuka","asuna","asura","aswan","async","atari","athol","athos","atkin","atlas","atlee","atlus","atman","atmos","atoll","atoms","atone","atria","attar","atten","attic","aubin","aubry","auden","audio","audit","audra","auger","aught","augie","augur","aunts","aunty","aural","auras","aurum","autos","autre","autry","auxin","avail","avant","avast","avert","avery","avian","avila","aviva","avner","avoca","avoid","avram","avril","awacs","await","awake","awami","award","aware","awash","aways","awful","awoke","awwww","axial","axing","axiom","axion","axles","axons","ayala","ayers","ayman","ayres","ayton","azadi","azeri","azhar","aztec","azure","azusa","azzam","babak","babar","babby","babel","baber","babes","babys","bache","backs","bacon","badal","baden","bader","badge","badly","badoo","badri","bafta","bagan","bagel","baggy","bahar","bahia","baidu","baier","baile","bails","baily","bains","baird","baits","bajaj","bajwa","bakar","baked","baker","bakes","bakri","balan","balch","baldy","baler","bales","balky","balla","balls","bally","balms","balmy","baloo","balor","balsa","balto","bamba","bambi","banal","banca","banco","banda","bande","bando","bands","bandy","banff","banga","bangs","banjo","banks","banta","bantu","barak","baran","barat","barba","barbs","barca","bardo","bards","bared","bares","barge","barks","barmy","barns","baron","barra","barre","barry","barth","barts","barty","bartz","basal","based","basel","bases","basha","basic","basie","basil","basin","basis","basle","basra","basso","basta","baste","basti","batch","bated","bates","bathe","baths","batik","baton","batra","batts","batty","batum","bauer","baugh","bawdy","bayan","bayer","bayes","bayne","bayou","bazar","bball","beach","beads","beady","beaks","beale","beall","beals","beams","beane","beano","beans","beard","bears","beast","beata","beats","beaty","beatz","beaut","beaux","bebop","becca","becks","becky","beebe","beech","beefs","beefy","beens","beeps","beers","beery","beets","befit","befor","began","begat","beget","beggs","begin","begum","begun","behan","behar","beige","being","beira","belay","belch","belen","belie","bella","belle","belli","bello","bells","belly","below","belts","bemis","bench","benda","bends","bendy","benes","benet","bengt","benin","benji","benjy","benny","bento","benue","benzo","berea","beret","berge","berke","berks","berle","bernd","berne","berns","berra","berry","berta","berth","beryl","beset","beste","bests","betas","betel","bethe","betis","betsy","betta","bette","betts","betty","bevan","bevel","bevin","bexar","beyer","bezel","bezos","bhatt","bibby","bible","bicep","biddy","biden","bidet","biffy","biggs","bight","bigly","bigot","bihar","bijou","biked","biker","bikes","bilal","bilbo","biles","bilge","billa","bills","billy","bimbo","bindi","binds","binge","bingo","binks","binky","binns","biome","biota","birch","birds","birdy","birks","birla","birth","bison","bitch","biter","bites","bitsy","bitty","bixby","bjork","bjorn","black","blade","blain","blair","blake","blame","blanc","bland","blane","blank","blare","blase","blass","blast","blatt","blaze","bleak","bleat","blech","bleed","bleep","blend","bless","blest","blick","blige","bligh","blimp","blind","bling","blink","blips","bliss","blitz","bloat","blobs","bloch","block","blocs","blogs","blois","bloke","blond","blood","bloom","bloop","bloor","blots","blown","blows","blued","bluer","blues","bluey","bluff","blume","blunt","blurb","blurs","blurt","blush","bluth","blyth","board","boars","boast","boats","boban","bobbi","bobby","bocce","boden","bodes","bodhi","bodie","boehm","boers","boeuf","bogan","bogey","boggs","boggy","bogie","bogle","bogor","bogue","bogus","bogut","bohol","bohun","boils","boing","boise","bojan","bokeh","bokep","bolan","boles","bolin","bolsa","bolts","bolus","bomba","bombs","bonar","bondi","bonds","boned","boner","bones","boney","bongo","bongs","bonin","bonne","bonny","bonus","boobs","booby","booed","books","booms","boone","boons","boosh","boost","booth","boots","booty","booze","boozy","boras","borat","borax","bored","borel","boren","borer","bores","borgo","boric","boris","borne","borno","borns","boron","bosch","bosco","bosom","boson","bossa","bossy","botch","botha","botox","bough","boult","bound","bourg","bourn","bouts","bovis","bowed","bowel","bowen","bower","bowes","bowie","bowls","boxed","boxer","boxes","boyce","boyer","boyes","boyle","boyne","brace","brack","brady","braff","braga","bragg","brags","braid","brain","brake","brand","brann","brant","brash","brass","brats","bratz","braun","brava","brave","bravo","brawl","brawn","bread","break","bream","breck","breda","breed","breen","brees","brent","brest","brett","brews","brian","briar","bribe","brice","brick","brics","bride","brief","brien","brier","brill","brims","brine","bring","brink","briny","brion","brisk","brita","brite","brito","brits","britt","broad","brock","brody","broil","broke","bromo","bronn","bronx","brony","brood","brook","broom","broth","broun","brown","brows","bruce","bruin","brule","bruna","bruni","bruno","bruns","brunt","brush","brute","bryan","bryce","brynn","bryon","bskyb","bubba","buble","bucko","bucks","bucky","buddy","budge","buell","buena","bueno","buffs","buffy","buggy","bugle","bugsy","buick","build","built","bukit","bulbs","bulge","bulky","bulla","bulli","bulls","bully","bulma","bumps","bumpy","bunce","bunch","bundt","bundy","bunga","bunge","bunks","bunny","bunty","buona","buono","buoys","burbs","burch","buren","burge","burgh","burka","burke","burks","burly","burma","burne","burns","burnt","burps","burqa","burro","burrs","burry","bursa","burst","busan","busby","busch","buses","busey","bushy","bussy","busta","busts","busty","butch","butte","butts","butyl","buxom","buyer","buyin","buzzy","byers","bylaw","bynes","bynum","byram","byrds","byrne","byron","bytes","byung","byway","cabal","cabin","cable","cabos","cabot","cacao","cache","cacti","caddo","caddy","cadet","cadiz","cadre","cafes","caffe","caged","cages","cagey","caine","caird","cairn","cairo","caius","cajon","cajun","caked","cakes","caleb","caley","calif","calla","calle","calls","cally","calms","calum","calvo","calyx","camel","cameo","cammy","campo","camps","campy","camry","camus","canal","canby","candi","candy","caned","canes","canio","canis","canna","canny","canoe","canon","canst","canto","cantu","caped","capel","caper","capes","capex","capon","capps","cappy","capra","capri","capua","caput","carat","carbo","carbs","cardi","cards","cared","carer","cares","carew","carex","carey","cargo","carib","carla","carle","carli","carlo","carly","carne","carol","caron","carpe","carre","carry","carta","carte","carti","carts","carty","carve","caryl","casas","casca","casco","cased","cases","casey","casio","casks","caste","casts","casus","catch","cater","cates","cathy","caton","catty","caulk","causa","cause","cavan","caved","caves","cayce","cease","cecil","cedar","ceded","celeb","celia","cello","cells","celso","celta","celts","cento","cents","ceres","cerro","certs","cesar","cette","ceuta","chace","chaco","chafe","chaff","chaim","chain","chair","chaka","chalk","chama","champ","chana","chand","chang","chant","chaos","chapo","chaps","chara","chard","charl","charm","chars","chart","chase","chasm","chats","chaya","cheap","cheat","check","cheek","cheep","cheer","cheez","chefs","chemo","cheng","cheol","cheri","chert","chess","chest","chevy","chews","chewy","chiao","chiba","chibi","chica","chick","chico","chide","chidi","chief","chien","chika","child","chile","chili","chill","chime","chimp","china","chine","ching","chink","chinn","chino","chins","chips","chirp","chive","chloe","chock","choco","choir","choke","chola","cholo","chomp","chong","chook","choon","chops","chord","chore","chose","chowk","chris","chrom","chron","chuan","chubb","chuck","chugs","chuka","chula","chump","chums","chung","chunk","churn","chute","chyna","ciara","cider","cielo","cigar","cigna","cilia","cilla","cinch","cinco","cincy","cindy","cinna","cinta","circa","circe","cisco","cissy","cited","cites","citra","civic","civil","cking","clack","clade","claes","claim","clair","clamp","clams","clang","clank","clans","clapp","claps","clara","clare","clark","claro","clary","clash","clasp","class","claud","claus","clave","claws","clays","clean","clear","cleat","cleef","cleft","clegg","clerk","cleve","click","cliff","clift","climb","cline","cling","clink","clint","clips","clive","cloak","clock","clogs","clomp","clone","close","cloth","clots","cloud","clout","clove","clown","clubs","cluck","clued","clues","clump","clung","clunk","cluny","clwyd","clyde","clyne","coach","coady","coals","coast","coats","cobbs","cobol","cobra","cocks","cocky","cocoa","cocos","codec","coded","coder","codes","codex","codon","coeur","coffs","cogan","cohan","cohen","coils","coins","coked","coker","cokes","colas","colby","colds","coles","coley","colic","colin","colle","colne","colon","color","colts","colum","coman","comas","combe","combi","combo","combs","comer","comes","comet","comey","comfy","comic","comin","comma","comme","comms","compa","compo","comps","comte","conan","conch","conde","condi","condo","cones","coney","conga","congo","conic","conor","const","conte","conti","contr","conus","convo","conwy","cooch","cooke","cooks","cools","coons","coops","coopt","coord","coors","coote","coots","coped","copes","coppa","copra","copse","copts","coral","coram","corby","cords","cordy","corea","cored","corel","cores","corey","corfu","corgi","corks","corky","corne","corns","corny","corpo","corps","corre","corry","corsa","corse","corsi","corso","corte","corvo","cosby","cosmo","costa","costs","cotes","cotta","cotto","couch","cough","could","count","coupe","coups","cours","court","couth","coven","cover","coves","covet","covey","covid","cowan","cowed","cowen","cower","cowes","cowie","coyle","coyly","coyne","crabb","crabs","crack","craft","crags","craic","craig","crain","cramp","crane","crank","craps","crash","crass","crate","crave","crawl","craze","crazy","creak","cream","crean","creat","credo","creed","creek","creel","creep","crema","creme","crepe","crept","cress","crest","crete","crewe","crews","cribs","crick","cried","crier","cries","crime","crimp","crips","crisp","criss","crist","croak","croat","croce","crock","crocs","croft","croix","croke","crone","cronk","crony","crook","croon","crops","crore","cross","croup","crowd","crowe","crown","crows","crude","cruel","crumb","crump","crunk","cruse","crush","crust","cruze","cryer","cryin","crypt","csiro","cuban","cubby","cubed","cubes","cubic","cubit","cucks","cuddy","cueto","cuffs","culls","culpa","cults","cumin","cunha","cunts","cuoco","cuomo","cupid","cuppa","curbs","curds","cured","cures","curia","curie","curio","curls","curly","curry","curse","curso","curve","curvy","cusco","cushy","cusps","cuter","cutie","cutts","cutty","cuzco","cyber","cycle","cyclo","cydia","cylon","cymru","cyndi","cynic","cynon","cyril","cyrus","cysts","czech","dacca","dacha","dacia","dacre","daddy","daegu","daesh","daffy","dafoe","dafuq","dagon","daigo","daily","dairy","daisy","daiwa","dakar","dakin","dalai","dalal","dalam","dalby","dalek","dales","daley","dalia","dalit","dalla","dally","daman","damen","dames","damme","damon","danby","dance","dancy","dando","dandy","danes","danke","danko","danni","danny","danse","dansk","dante","danza","daraa","darby","darcy","dared","daren","dares","daria","darin","dario","darke","darko","darla","darpa","darth","darts","darya","daryl","dasha","dated","dates","datta","datuk","datum","daunt","davao","davey","david","davie","davin","davis","davos","dawes","dawgs","dawns","dayal","dayan","dayna","dayne","dayum","dazed","deals","dealt","deane","deans","dears","death","debar","debby","debit","debra","debts","debug","debut","decaf","decal","decay","decca","decks","decor","decoy","decry","dedup","deeds","deems","deena","deepa","deeps","deere","deers","deets","defer","defoe","defra","degas","degli","deign","deion","deism","deity","dejan","delay","delco","delft","delhi","delia","della","delle","dello","dells","delon","delos","delph","delta","delve","demar","demon","demos","demur","denby","dench","denim","denis","deniz","denny","denon","dense","dente","dents","denys","depal","depay","depot","depth","depts","derby","derek","deron","derry","desai","desde","desks","deter","detox","deuce","devan","devas","devel","devil","devin","devoe","devon","devos","devry","dewan","dewar","dewey","dhabi","dhaka","dhoni","dials","diana","diane","diary","diced","dicey","dicks","dicky","diddy","didnt","didst","diego","diehl","diets","dietz","digby","diggs","digit","digne","dijon","dikes","dildo","dilip","dilla","dilly","dilma","dimas","dimer","dimes","dimly","dimon","dinah","dinar","dined","diner","dines","dingo","dings","dingy","dinka","dinky","dinos","diode","diogo","dione","diplo","dippy","dirac","dirge","dirks","dirty","disco","discs","disks","ditch","ditka","ditto","ditty","ditzy","divan","divas","dived","diver","dives","divvy","divya","diwan","dixie","dixit","dixon","dizzy","djing","djinn","dming","doane","dobbs","dobby","dobie","doble","docks","dodds","dodge","dodgy","doers","doesn","doggo","doggy","dogma","doing","dolan","dolby","dolce","doled","dolla","dolls","dolly","dolor","dolph","domed","domes","domme","domus","donal","donde","dongs","donna","donne","donny","donor","donut","dooby","doody","dooku","dooms","doors","doozy","doped","dopey","doral","doran","doren","doria","doric","doris","dorks","dorky","dorms","dorne","dosed","doses","doted","dotty","doubt","douce","dough","doula","douma","douro","douse","dover","doves","dovey","dowdy","dowel","dower","downe","downs","downy","dowry","doyen","doyle","dozed","dozen","dozer","draco","draft","drago","drags","drain","drake","drama","drang","drank","drape","drawl","drawn","draws","dread","dream","dredd","dregs","dress","dried","drier","dries","drift","drill","drink","drips","drive","drogo","droid","droit","droll","drone","drool","droop","drops","dross","drove","drown","drugs","druid","drums","drunk","drury","druze","dryer","dryly","dslrs","duals","duane","dubai","dubbo","dubey","ducal","ducey","duchy","ducks","ducky","ducts","duddy","dudes","duels","duets","duffy","dugan","dukes","dulce","dully","dumas","dumbo","dummy","dumps","dumpy","dunce","dunes","dunks","dunne","dunno","dunst","dunya","duomo","duong","duped","duper","dupes","dupre","duque","duran","duras","durch","durga","durin","durst","dusky","dusts","dusty","dutch","dutta","duval","duvet","dwarf","dweeb","dwell","dwelt","dwyer","dyfed","dying","dykes","dylan","dyson","dzeko","eadie","eagan","eager","eagle","eakin","eames","eamon","eared","earle","earls","early","earns","earst","earth","eased","easel","eases","eason","eaten","eater","eatin","eaton","eaves","ebbed","ebert","ebola","ebony","ebook","ecchi","echos","ecole","eddie","edema","edgar","edged","edges","edict","edify","edina","edith","edits","edsel","edson","edwin","eerie","eevee","effie","effin","efron","egged","egret","egypt","ehhhh","eibar","eight","eilat","einar","einem","einen","einer","eines","eisen","eject","ekiti","ekman","elana","eland","elbow","elche","eldar","elden","elder","eldon","elect","elegy","elena","eleni","elfin","elgar","elgin","elias","elide","elihu","elina","eliot","elisa","elise","elite","eliza","elkin","ellen","eller","ellie","ellis","elmer","elope","elric","elroy","elses","elsie","elson","elton","elude","elven","elves","elvin","elvis","elway","elwyn","elyse","emacs","email","embed","ember","embry","emcee","emden","emeli","emerg","emery","emile","emily","emits","emmet","emmys","emoji","emory","emote","empty","enact","ended","ender","endor","endow","enema","enemy","engel","engin","engle","enjoy","ennis","ennui","enoch","enola","enrol","enron","ensue","enter","entre","entry","enuff","enugu","enver","envoy","eonni","epcot","epics","epoch","epoxy","epsom","epson","equal","equip","equus","erase","erbil","erect","erica","erich","erick","erika","erisa","ernie","ernst","erode","erred","errol","error","erupt","ervin","erwin","esher","eshop","eskom","esper","esque","essai","essay","essen","essex","essie","estar","estee","ester","estes","ethan","ethel","ether","ethic","ethno","ethos","ethyl","etude","eugen","euler","euros","evade","evans","evens","event","evers","evert","every","evian","evict","evils","evita","evoke","ewald","ewart","ewell","ewing","exact","exalt","exams","excel","execs","exert","exile","exist","exits","exons","expat","expel","expos","extol","extra","exude","exxon","eyrie","faber","fabio","fable","fabre","fabry","faced","faces","facet","facie","facto","facts","faded","fader","fades","fafsa","fagan","fagin","fahad","fahey","fahim","fails","faint","faire","fairs","fairy","faith","faked","faker","fakes","fakir","falco","falls","false","falun","famed","famer","fancy","fangs","fanny","fanon","fanta","farah","faraj","farce","fared","fares","fargo","faria","farid","faris","farms","faroe","farsi","farts","fasts","fatah","fatal","fated","fateh","fates","fatih","fatma","fatty","fatwa","fauci","faulk","fault","fauna","faure","faust","faves","favor","favre","fawad","fawns","faxed","faxes","fayed","fayre","fazed","fazio","fears","feast","feats","fecal","feces","feder","fedex","fedor","feeds","feels","feely","feets","feige","feign","feint","feist","felix","feliz","fella","fells","felon","femme","femur","fence","fendi","fenix","fenty","feral","feria","fermi","ferns","ferri","ferro","ferry","festa","fests","fetal","fetch","feted","fetid","fetus","feuds","feuer","fever","fewer","ffxiv","fiber","fibre","fibro","ficus","fidel","fides","fiefs","field","fiend","fieri","fiery","fifer","fifth","fifty","fight","filed","filer","files","filet","filip","fille","fills","filly","films","filmy","filth","final","finch","finds","fined","finer","fines","finis","finna","finns","finra","fiona","fiore","fiori","fired","fires","firma","firms","first","firth","fishy","fiske","fists","fitch","fived","fiver","fives","fixed","fixer","fixes","fixin","fizzy","fjord","fking","flack","flagg","flags","flail","flair","flake","flaky","flame","flank","flaps","flare","flash","flask","flats","flava","flaws","fleas","fleck","flees","fleet","flesh","fleur","flexi","flick","flier","flies","fling","flinn","flint","flips","flirt","float","flock","floes","flood","floor","flops","flora","floss","flour","flout","flown","flows","flowy","floyd","fluff","fluid","fluke","flume","flung","flunk","fluor","flush","flute","flyby","flyer","flyin","flynn","flynt","foals","foams","foamy","focal","focus","fogel","foggy","foils","foist","folds","foles","foley","folic","folio","folks","folly","fonda","fonds","fonte","fonts","foods","fools","foote","foots","footy","foran","foray","force","forde","fords","forex","forge","forgo","forks","forma","forme","forms","forst","forte","forth","forts","forty","forum","forza","fossa","fosse","fotos","fouad","fouls","found","fount","fours","foust","fowls","foxes","foyer","foyle","frack","frail","frame","franc","frank","frans","franz","fraud","freak","freda","fredo","freed","freer","frees","frege","freon","frere","fresh","frets","freud","freya","friar","frick","frida","fried","friel","fries","frill","frisk","frist","frith","frito","fritz","frizz","frock","frodo","frogs","frome","fromm","frond","front","froot","frosh","frost","froth","frown","froze","fruit","fryer","fubar","fuchs","fucks","fudge","fuego","fuels","fugly","fugue","fujii","fully","fultz","fumed","fumes","funds","fundy","fungi","funke","funko","funky","funny","fuqua","furor","furry","furyk","fusco","fused","fuses","fussy","futon","fuzzy","gabba","gabby","gable","gabon","gabor","gacha","gadot","gaels","gaeta","gaetz","gaffe","gagne","gaily","gains","gainz","gaius","galas","galen","gales","galle","galli","gallo","galls","gally","gamal","gamba","gamed","gamer","games","gamma","gamut","ganda","gandy","ganga","gangs","ganja","gansu","gantt","gantz","garam","garay","garbo","garda","garde","garry","garth","garza","gases","gasol","gasps","gassy","gated","gates","gator","gatos","gatti","gatto","gaudy","gauge","gauls","gault","gaunt","gauri","gauss","gauze","gauzy","gavan","gavel","gavin","gawky","gayer","gayle","gazed","gazer","gazes","gazza","gcses","gears","geary","geass","gecko","geeks","geeky","geert","geese","geeta","gehry","geico","geist","gekko","gemma","genes","genet","genie","genii","genji","genki","genny","genoa","genre","gente","gents","genus","geoff","georg","gerda","germs","gerri","gerry","getty","getup","geyer","ghana","ghani","ghats","ghazi","ghent","ghose","ghosh","ghost","ghoul","giada","giant","gibbs","gibby","giddy","gifts","giggs","gilad","gilda","giles","gills","gilly","gilts","gimli","gimme","ginny","ginza","gioia","gipsy","girls","girly","girth","gitmo","given","giver","gives","givin","gizmo","glaad","glace","glade","gland","glans","glare","glass","glaze","gleam","glean","glebe","glenn","glens","glial","glick","glide","glint","glitz","gloat","globe","globo","glock","gloom","glory","gloss","glove","glows","gluck","glued","glues","gluon","glynn","glyph","gmail","gnash","gnats","gnome","goals","goats","godin","godly","godot","goers","goeth","goetz","gogol","gohan","going","goins","golan","golda","golds","goldy","golem","golgi","golly","gombe","gomer","gomes","gomez","gonad","goner","gongs","gonna","gonzo","gooch","goode","goods","goody","gooey","goofs","goofy","goons","goose","gopal","gopro","goran","gorda","gordo","gordy","gored","goren","gorge","gorka","gorky","gorse","gotch","gotha","goths","gotta","gotti","gotze","gouda","gouge","gough","gould","gourd","govan","gowan","gowdy","gower","gowns","goyal","grabs","grace","graco","grade","grado","grads","grady","graff","graft","grail","grain","grama","gramm","grams","grand","grant","grape","graph","grasp","grass","grata","grate","gratz","grave","gravy","grays","graze","great","grebe","greco","greed","greek","green","greer","greet","gregg","greig","greta","grete","greys","grice","grids","grief","grieg","grier","griff","grift","grigg","grill","grima","grime","grimm","grimy","grind","grins","gripe","grips","grist","grits","grizz","groan","grodd","groff","grohl","groin","gronk","groom","groot","grope","grose","gross","grote","groth","group","grout","grove","growl","grown","grows","grrrr","grubb","grubs","gruel","gruen","gruff","grump","grunt","grupo","guage","guang","guano","guapo","guard","guava","gucci","guess","guest","guide","guido","guild","guile","guilt","guise","gulag","gulch","gulen","gules","gulls","gully","gulps","gumbo","gumby","gummi","gummy","gundy","gunna","gunny","guppy","gupta","gurps","gurus","gusta","gusto","gusts","gusty","gutsy","gutta","guyer","gwent","gwynn","gypsy","gyros","gyrus","haase","haben","haber","habib","habit","hacer","hacks","hacky","haden","hader","hades","hadid","hadji","hadnt","hafez","hafiz","hagan","hagar","hagel","hagen","hager","hagia","hague","hahaa","hahah","haida","haifa","haigh","haiku","haile","hails","hairs","hairy","haiti","hajji","hakan","hakim","halal","halas","halen","halep","hales","haley","halim","halla","halle","hallo","halls","halos","halts","halve","hamad","haman","hamas","hamdi","hamed","hamel","hamer","hamid","hammy","hamon","hamza","hanan","handa","handi","hands","handy","hanes","haney","hangs","hanif","hanks","hanky","hanna","hanne","hanoi","hansa","hants","hanyu","hanzo","happy","haque","haram","haran","hards","hardy","harem","haren","hares","haris","harms","harpo","harps","harpy","harry","harsh","harte","harts","hartz","harun","hasan","hasnt","hasta","haste","hasty","hatch","hated","hater","hates","hatha","hatin","hatta","hauer","hauls","haunt","haupt","hausa","haute","havas","havel","haven","haver","haves","havin","havnt","havoc","havok","havre","hawes","hawke","hawks","hayao","hayat","haydn","hayek","hayes","hayne","hazel","hazen","heads","heady","heald","heals","healy","heaps","heard","hearn","hears","heart","heath","heats","heave","heavy","hebdo","hebei","heber","hecht","hedda","hedge","hedon","heels","hefty","hegel","heian","heidi","heigl","heine","heinz","heirs","heist","helen","helga","helge","helio","helix","hella","helle","hello","hells","helms","helps","hemel","hemet","henan","hence","hendo","henin","henna","henne","henny","henri","henry","herat","herbs","herds","heres","herne","herod","heron","heros","hersh","herts","hertz","herve","herzl","hesse","hetty","heuer","heung","hewes","hexes","heyer","hiatt","hicks","hideo","hides","higgs","highs","hight","hijab","hiked","hiker","hikes","hilal","hilda","hilde","hills","hilly","hilux","himym","hinch","hindi","hinds","hindu","hines","hinge","hints","hipaa","hippo","hippy","hirai","hiram","hired","hires","hirsh","hirsi","hirst","hissy","hitch","hives","hmmmm","hmong","hoang","hoard","hoare","hoary","hoban","hobbs","hobby","hobie","hobos","hocus","hodge","hodor","hofer","hoffa","hogan","hogue","hoist","hokey","holby","holds","holed","holes","holla","holly","holme","holst","holtz","homan","homed","homer","homes","homey","homie","homme","homos","honan","honda","hondo","honed","hones","honey","honks","honky","honor","hooch","hoods","hoody","hoofs","hooke","hooks","hooky","hoops","hoots","hoped","hopes","hopin","hoppe","hoppy","horan","horde","horne","horns","horny","horry","horse","horst","horta","horus","hosea","hosed","hoses","hoshi","hosni","hossa","hosts","hotch","hotel","hotly","hough","houma","hound","hours","house","hovel","hover","howdy","howes","howie","howls","howto","hoyer","hoyle","hsiao","hsieh","hsien","hsing","https","huang","hubba","hubby","hubei","huber","huffs","huffy","hulks","hulls","hulme","hulse","human","humes","humic","humid","humor","humph","humps","humus","hunan","hunch","hunks","hunky","hunts","hurls","huron","hurry","hurst","hurts","husks","husky","hussy","hutch","hwang","hyatt","hyder","hydra","hydro","hyena","hyeon","hyman","hymen","hymns","hynes","hyoid","hyped","hyper","hypno","hythe","hyung","hywel","ibaka","ibiza","ibrox","ibsen","icahn","icann","icbms","icici","icily","icing","icons","idaho","ideal","ideas","ident","idgaf","idina","idiom","idiot","idler","idlib","idols","idris","idyll","iftar","ifttt","ifyou","igloo","ignis","ikeda","iknow","ilana","ilene","ilham","iliac","iliad","ilium","illus","ilona","image","imago","imams","imani","imbue","imgur","impel","imply","imran","inaba","inane","inbev","inbox","incan","incas","incur","inder","index","india","indic","indie","indio","indra","indus","ineos","inept","inert","infer","infor","infos","infra","inger","ingle","ingot","inigo","inked","inlay","inlet","inman","inner","innes","innis","innit","inoue","input","inset","inspo","insta","intel","inter","inthe","intra","intro","inuit","ionia","ionic","ipads","ipods","ipsos","ipsum","iqbal","irani","iraqi","irate","irena","irene","irfan","irina","irish","irked","irons","irony","irvin","irwin","isaac","isaak","isang","ishaq","ishii","isiah","islam","islay","isles","islet","isley","islip","isner","isola","issac","issei","issue","isuzu","italo","italy","itchy","items","ivana","ivory","iwata","iwobi","izmir","izumi","izzie","jabal","jabba","jaber","jabez","jacek","jacko","jacks","jacky","jacob","jaded","jaden","jafar","jaffa","jaffe","jager","jahan","jails","jaime","jaina","jains","jaish","jakes","jakob","jakub","jalal","jalan","jalen","jalil","jamal","jamar","jamba","james","jamey","jamia","jamie","jamil","jammu","jammy","janes","janet","janey","jango","janie","janis","janko","janky","janna","janne","janos","janus","japan","jared","jarod","jason","jaune","jaunt","javad","javed","javid","jawad","jawed","jayne","jazzy","jeans","jebel","jeeps","jeers","jeezy","jeffs","jehan","jello","jelly","jemma","jenga","jenks","jenna","jenni","jenny","jeong","jerez","jerks","jerky","jerri","jerry","jerzy","jessa","jesse","jessi","jessy","jesus","jeter","jetta","jetty","jeune","jewel","jewry","jiang","jiffy","jiggy","jihad","jilin","jilly","jimbo","jimin","jimmy","jinan","jinks","jinny","jitsu","jived","joana","joann","jocks","jodie","joffe","johan","johar","johns","johny","johor","joins","joint","joist","joked","joker","jokes","jokey","jokic","jolie","jolla","jolly","jolts","jonah","jonas","jones","jonjo","jonny","jonze","jools","joong","joost","jorah","jordi","jordy","jorge","joris","josef","josep","josey","joshi","josie","josip","joule","jours","joust","jovan","joyce","jozef","jstor","juana","jubal","judah","judas","judea","judeo","judge","judgy","juice","juicy","jukes","julep","jules","julia","julie","julio","jumbo","jumps","jumpy","junge","junie","junko","junks","junky","junta","juris","juror","jussi","juste","justo","jutsu","jyoti","kaaba","kabhi","kabir","kabul","kacey","kaden","kader","kadir","kadri","kaede","kafir","kafka","kagan","kahan","kahlo","kaiju","kaine","kaito","kajal","kakao","kalam","kaleb","kaley","kalin","kalle","kamal","kaman","kamar","kamel","kamen","kamil","kamla","kampf","kamui","kanan","kanda","kandi","kandy","kanga","kanji","kanna","kanta","kante","kanto","kanye","kaori","kaoru","kapil","kappa","kapur","karam","karan","karat","karel","karen","karim","karin","karla","karma","karna","karol","karoo","karst","karts","karyn","kasai","kasem","kasey","kashi","kasia","kasim","kates","katey","katha","kathy","katia","katie","katja","katsu","katya","kauai","kavya","kawai","kawhi","kayak","kayla","kayne","kazan","kazoo","kazuo","keane","keanu","keats","kebab","kedah","keefe","keele","keels","keely","keene","keeps","kegan","kegel","kehoe","keiko","keira","keita","keith","kelis","kelli","kells","kelly","kelso","kemal","kemba","kempe","kenai","kenan","kendo","kenji","kenna","kenny","kenta","kenya","kenzo","keogh","keren","kerns","kerri","kerry","kesha","ketch","keung","kevan","kevin","keyed","keyes","kezia","khadi","khadr","khair","khaki","khali","khans","khloe","khmer","kiara","kicks","kiddo","kiddy","kiely","kiera","kilda","kiley","killa","kills","kilns","kilos","kilts","kimba","kimmy","kinda","kinds","kings","kinks","kinky","kiosk","kiowa","kiran","kirby","kirin","kirke","kirov","kirti","kiryu","kisan","kishi","kissy","kites","kitts","kitty","kiwis","kizer","klaas","klang","klara","klass","klaus","klein","klerk","klimt","kline","kling","klopp","klose","kloss","klotz","kmart","knack","knapp","knave","knead","kneed","kneel","knees","knell","knelt","knick","knife","knits","knobs","knock","knoll","knope","knopf","knorr","knots","knott","known","knows","koala","kochi","kochs","kodak","kogan","kohli","kohls","kolbe","komen","kondo","kongo","kooks","kooky","koons","koran","korda","korea","koren","korps","korra","kosta","kotor","kovac","kozak","krabs","kraft","kranz","kratz","kraus","kraut","krazy","krebs","kreme","kress","krieg","krill","kriss","krist","kroll","krona","krone","kroos","kross","krsna","krull","krupa","krupp","kruse","kuala","kuang","kudos","kumar","kunal","kunis","kunst","kunta","kurds","kursk","kurta","kurtz","kutch","kuzma","kvyat","kwame","kwang","kwara","kwong","kyler","kylie","kyoko","kyoto","kyrie","kyung","laban","label","labia","labor","lacan","laced","laces","lacey","lacks","lacma","laden","ladle","lager","laggy","lagos","lahey","laika","laila","laine","laing","laird","lairs","laity","laker","lakes","lakhs","lalit","lally","lamar","lamas","lambo","lambs","lamer","lamia","lamps","lanai","lance","lancs","landa","lande","landi","lando","lands","landy","lanes","laney","lange","lanka","lanky","lanny","lanza","laped","lapel","lapis","lapse","larch","large","largo","largs","larks","larne","larry","larue","larva","laser","lasik","lasky","lasse","lasso","lasts","latam","latch","later","lates","latex","lathe","latif","latin","latta","latte","lauda","laude","lauds","lauer","laugh","laura","laure","lauri","lausd","laval","lavar","lavas","laver","lavin","lawes","lawns","laxmi","layed","layer","layin","layla","layne","layup","lazar","lazer","lazio","lazlo","leach","leads","leafs","leafy","leahy","leake","leaks","leaky","leann","leans","leant","leaps","leapt","learn","leary","lease","leash","least","leave","leben","leche","ledge","leduc","leech","leeds","leeks","leela","leena","leery","lefts","lefty","legal","leger","legge","leggy","legia","legit","legos","leica","leigh","leila","leith","leman","lemar","lemay","lemke","lemma","lemme","lemmy","lemon","lemur","lendl","lends","lenin","lenny","lenox","lense","lentz","leona","leone","leong","leoni","leper","leroy","lesbo","leste","letts","letty","leung","levar","levee","level","leven","lever","levey","levin","levis","levon","lewes","lewin","lewis","lexie","lexis","lexus","leyla","leyte","leyva","lgbti","lgbtq","lhasa","liana","liane","liang","liars","libby","libel","liber","libor","libra","libre","libri","libro","libya","licht","licks","lidar","liddy","lidia","liebe","liege","liens","lieut","lifer","lifes","lifts","liger","light","ligne","ligue","liked","liken","likes","likey","likud","lilac","lilia","lille","lilli","lilly","liman","limbo","limbs","limes","limit","limon","limos","limps","linda","linde","lindo","lindt","lindy","linea","lined","linen","liner","lines","lingo","linke","links","linky","linus","linux","lions","lipid","lippi","lippy","lisle","lissa","liste","lists","liszt","liter","lites","lithe","litle","litre","lived","liven","liver","lives","livia","livid","livin","livre","lizzy","llama","llano","lloyd","lmaoo","lmfao","loach","loads","loamy","loans","loath","lobby","lobed","lobes","lobos","local","lochs","locke","locks","locos","locum","locus","lodge","loess","loewe","lofts","lofty","logan","logic","logie","login","logon","logos","logue","lohan","loins","loire","lolly","lolol","loman","lomas","lomax","londo","loner","loney","longo","longs","lonzo","looks","looky","looms","loona","loong","loons","loony","loops","loopy","loose","lopes","lopez","loran","loras","lorca","lorde","lords","lordy","loren","lorie","lorin","loris","lorna","lorne","lorre","lorry","loser","loses","losin","lossy","lotsa","lotta","lotte","lotto","lotus","lough","louie","louis","louse","lousy","louth","lovat","loved","lover","loves","lovey","lovie","lovin","lowen","lower","lowes","lowly","lowry","loyal","luang","luann","lubin","lucan","lucas","lucca","lucci","lucha","lucho","lucia","lucic","lucid","lucie","lucio","lucky","luffy","lugar","luger","luigi","luisa","lujan","lukas","lukes","lulls","lumen","lumia","lumix","lumps","lumpy","lunar","lunch","lundy","lunge","lungs","lupin","lupus","lurch","lured","lures","luria","lurid","lurie","lurks","lusts","lusty","luton","luxor","luzon","lyall","lycan","lycra","lydia","lydon","lyell","lying","lyles","lyman","lymph","lynch","lynda","lynne","lyons","lyric","lysis","lysol","lytle","mabel","mabry","macan","macao","macau","macaw","macey","macha","mache","machi","macho","macht","machu","macon","macos","macro","madam","madan","maddy","madea","madge","madhu","madly","madox","madre","maeda","maeve","mafia","mafic","magda","magee","mages","maggi","magic","magik","magma","magna","magni","magog","magoo","magus","mahal","mahan","mahdi","maher","mahon","maida","maids","maier","mails","maine","mains","maint","mainz","maior","maire","maize","majid","majin","major","makan","maker","makes","makin","malak","malam","malan","malay","malek","males","malia","malik","malin","malls","mally","malmo","malta","malts","malus","maman","mamas","mamba","mambo","mamet","mamie","mamma","mammy","manas","mance","manda","mandi","mando","mandy","manes","manet","manga","mange","mango","mania","manic","manis","manju","manly","manna","manne","manny","manoa","manoj","manon","manor","manos","manse","manta","manti","manus","maori","mapes","maple","marat","marca","march","marci","marco","marcy","mardi","maree","marek","maren","mares","marfa","marga","marge","margo","maria","marie","marin","mario","maris","marit","marke","marko","marks","marky","marla","marlo","marly","marne","marni","maroc","maron","marra","marry","marsh","marta","marte","marth","marti","marts","marty","marya","marys","masai","masao","masha","masih","masks","mason","masri","massa","masse","massy","masts","masuk","match","mated","mateo","mater","mates","matey","maths","matic","matin","matos","matsu","matta","matte","matti","matty","matzo","maude","mauer","maule","mauna","maung","maura","mauro","maury","mauve","maven","mavic","mavis","maxed","maxie","maxim","maxis","mayan","maybe","mayer","mayes","mayne","mayor","mayra","mazar","mazda","mazel","mazes","mazur","mbeki","mccaw","mccoy","mcfly","mcgee","mckay","mckee","mckim","mcnab","mcrae","mcvay","mcvey","meade","meads","meals","mealy","means","meant","meany","mears","meath","meats","meaty","mecca","mecha","mechs","medal","medan","medea","medes","media","medic","medio","meech","meeks","meena","meera","meese","meets","megan","megas","megha","megyn","mehdi","mehra","mehta","meier","meigs","meiji","meine","mejia","melba","melds","melee","meles","melia","mello","melly","melon","melts","melty","memes","memos","mende","mendy","menlo","menon","mensa","menus","meows","merah","merch","merci","merck","mercs","mercy","merge","merit","merle","meron","merry","mertz","merwe","meryl","mesas","messe","messi","messy","mesut","metal","meted","meter","metis","metoo","metra","metre","metro","metta","mette","meuse","meyer","mezzo","miami","miata","micah","micha","michi","micky","micro","midas","midge","midst","miele","miggy","might","migos","mikel","mikes","mikey","mikko","milan","milch","miler","miles","miley","milfs","milks","milky","milla","mille","milli","mills","milly","milne","milos","mimes","mimic","mimsy","minaj","minas","mince","minds","mindy","mined","miner","mines","mingo","minho","minis","minke","minna","minny","minor","minos","minot","minsk","minto","mints","minty","mintz","minus","mirai","mired","mirko","mirna","mirth","mirza","miser","mises","misha","misra","missa","missy","mista","mists","misty","mitch","miter","mites","mitra","mitre","mitts","mitty","mitzi","miura","mixed","mixer","mixes","mixon","mixup","mmmmm","moana","moans","moats","mobil","mocha","mochi","mocks","modal","model","modem","modes","modis","modoc","modus","mogul","mohan","mohit","moira","moise","moist","molar","molde","molds","moldy","moles","molle","molly","molto","momma","mommy","momoa","monad","monde","mondo","monet","money","mongo","moniz","monks","monro","monta","monte","month","monti","monty","monza","mooch","moocs","moods","moody","moons","moore","moors","moose","mopar","moped","morag","moral","moran","moray","moree","morel","mores","morey","moria","morin","morne","moron","morph","morro","morse","morsi","morte","morty","mosby","mosca","moser","moses","mosey","moshe","moshi","mossy","mosul","motel","motes","moths","mothy","motif","motor","motta","motte","motto","mould","moult","mound","mount","moura","mourn","mousa","mouse","mouth","moved","mover","moves","movie","movin","mowat","mowed","mower","mowry","moxie","moxon","moyer","moyes","mrnas","msnbc","mtdna","mucho","mucky","mucus","muddy","mudge","mudra","muffs","mufti","mugen","muggy","mujer","mulan","mulch","mules","mulla","mulls","multi","mumbo","mummy","mumps","munch","muncy","mundi","mundo","mundt","mundy","mungo","munir","munna","munoz","munro","murad","mural","murat","murdo","murky","murph","murry","mused","musee","museo","muses","mushy","music","musik","musky","musta","musty","mutch","muted","mutes","mutha","mutts","muzik","myers","mylan","mylar","myles","myrna","myron","myrrh","mysql","myths","myung","naacp","nabil","naboo","nacho","nacht","nadal","nader","nadia","nadir","nadph","nadya","naeem","nafta","nagai","nagar","nagas","nagel","nagle","nahum","naidu","naija","nails","naina","naira","nairn","naito","naive","najaf","najib","naked","naman","namco","named","names","nampa","namur","nanak","nance","nancy","nanda","nandi","nando","nanna","nanny","naoki","naoko","naomi","naoto","nappa","nappy","narco","nasal","nasim","nasir","nasri","nasty","natal","natch","natsu","natty","natur","nauru","naval","navas","navel","naver","navin","nawab","nawal","nawaz","naxos","nayak","nazar","nazca","nazim","nazir","nazis","nbcsn","neale","nears","neary","neath","neave","necks","necro","needs","needy","neely","negan","negev","negra","negri","negro","negus","nehru","neigh","neill","nella","nelle","nelly","nepal","nephi","nerds","nerdy","nerve","nervy","nessa","nesta","nests","neuer","neues","neuro","never","neves","nevin","nevis","newby","newer","newly","newry","newts","nexus","nflpa","nginx","ngozi","nhtsa","niall","niamh","niang","nicer","niche","nicht","nicki","nicks","nicky","nicol","niece","niels","niemi","nieto","nifty","nigel","niger","nigga","night","nigra","nihil","nihon","nikes","nikki","nikko","nikon","nikos","niles","nilly","nimmo","nimoy","niner","nines","ninja","ninth","niobe","niosh","nippy","niqab","nisar","nisha","nishi","nismo","nitin","nitro","nitty","nivea","niven","nixed","nixon","nizam","nobby","nobel","nobis","noble","nobly","noche","nodal","noddy","nodes","noice","noida","noire","noise","noisy","nokia","nolan","nolen","nolte","nomad","nomen","nonce","nonna","noobs","nooks","noona","noone","noooo","noosa","noose","norad","norah","norco","norge","norma","norms","norse","norsk","norte","north","nosed","noses","nosey","nosql","notch","noted","notes","notre","notte","notts","nouns","nouri","novak","novel","novus","nowak","noyce","noyes","nsaid","nsclc","nsdap","nsync","nubia","nucky","nudes","nudge","nudie","nueva","nuevo","nuked","nukem","nukes","numan","nunca","nunes","nunez","nuova","nuovo","nurse","nusra","nutty","nyack","nycfc","nylon","nyman","nymph","nyssa","oaken","oakes","oases","oasis","oates","oaths","obama","obese","obeys","ocala","occur","ocean","ochoa","ochre","octal","octet","oddly","odell","odeon","odile","odors","odour","ofcom","offal","offer","often","ofthe","ogata","ogawa","ogden","ogres","ohana","ohara","ohhhh","oiled","oiler","okada","okita","okoye","olden","older","oldie","oleic","oline","oliva","olive","ollie","olney","olsen","olson","omagh","omaha","omani","omari","ombre","omega","omens","omits","omnia","omnis","omran","onion","onsen","onset","onthe","ontop","oompa","oomph","ooooh","ooooo","ooops","oozed","oozes","opals","opens","opera","ophir","opine","opium","oprah","opted","optic","optus","orang","orate","orban","orbis","orbit","orcas","orden","order","ordre","oreal","oreos","organ","orhan","oriel","origi","orion","orisa","orlov","orman","oromo","orrin","orsay","orson","ortho","ortiz","orton","osage","osaka","osama","osamu","oscar","oshie","oskar","osler","osman","ossie","oster","ostia","osuna","otago","otaku","otero","other","otley","otome","otter","otway","ouest","ought","ouija","ounce","outdo","outed","outer","outro","outta","ovale","ovals","ovary","ovate","ovens","overs","overt","ovoid","owain","owari","owens","owing","owned","owner","oxbow","oxfam","oxide","oxley","ozark","ozawa","ozone","ozuna","ozzie","pablo","pabst","paced","pacer","paces","pacey","pacha","packs","pacts","paddy","padma","padme","padre","padua","paean","pagan","paged","pager","pages","paget","paige","pails","paine","pains","paint","pairs","paisa","paise","palau","paled","paleo","paler","pales","paley","palin","pally","palma","palme","palms","palos","palsy","paltz","pampa","panda","panel","panes","pangs","panic","panik","panky","panna","panos","pansy","panto","pants","panty","panza","paola","paoli","paolo","papal","papas","paper","pappa","pappu","pappy","papua","param","paras","parch","pardo","pared","pares","paris","parka","parke","parks","parle","parma","parra","parry","parse","parsi","parte","parti","parts","party","parva","pasar","pasco","paseo","pasha","pasig","pasok","passe","pasta","paste","pasts","pasty","patch","patek","patel","pater","pathe","paths","patil","patio","patna","paton","patra","patsy","patti","patty","paula","pauli","paulo","pauls","pauly","pause","paved","pavel","paves","pavia","pavlo","pawan","pawar","pawel","pawns","payed","payee","payer","payet","payin","payne","paytm","peace","peach","peake","peaks","peaky","peale","pearl","pears","peart","peary","pease","peasy","peaty","peavy","pecan","pecks","pecos","pedal","pedos","pedro","peeks","peele","peels","peeps","peers","peeta","peeve","peggy","peice","pekin","pekka","pella","pelle","pelly","pelts","pemex","penal","pence","penis","penna","penne","penny","penta","peons","peony","pepin","peppa","peppy","pepsi","pepto","pepys","perak","perce","perch","percy","peres","perez","peril","perks","perky","perla","perle","perma","peron","perot","perps","perri","perry","perse","perth","pervs","pervy","pesci","pesky","pesos","pesto","pests","petal","petar","petco","peter","petes","petey","petit","petra","petre","petri","petro","petry","petty","petyr","pewds","pffft","phage","pharm","phase","phill","philo","philp","phils","phish","phlox","phnom","phone","phong","phono","phony","photo","piano","picea","picks","picky","picot","picts","piece","piero","piers","piety","piezo","piggy","pikes","pilaf","pilar","piled","piles","pills","pilot","pimps","pinal","pinch","pines","piney","pings","pinks","pinky","pinot","pinoy","pinto","pints","pinup","pinus","piotr","pious","piped","piper","pipes","pippa","pippi","pique","pires","pirie","pirlo","pisco","pissy","piste","pitch","pithy","pitta","pitts","pitty","piven","pivot","pixar","pixel","pixie","pizza","place","plaid","plain","plait","plane","plank","plano","plans","plant","plata","plate","plath","plato","plats","platt","platz","playa","plays","plaza","plead","pleas","pleat","plebs","plein","plied","plier","plies","pliny","plonk","plots","plows","ploys","pluck","plugs","plumb","plume","plump","plums","plunk","plush","pluto","poach","pocus","podge","poems","poets","pogba","pogue","point","poise","poked","poker","pokes","pokey","polak","polar","poles","polio","polis","polit","polka","pollo","polls","polly","polos","polyp","ponca","ponce","ponds","pongo","ponta","ponte","ponty","ponzi","pooch","pooja","poole","pools","poona","poops","poopy","popes","popov","poppa","poppe","poppy","popup","porch","pored","pores","porgy","porky","porno","porta","porte","porto","ports","posed","posen","poser","poses","posey","posit","posix","posse","poste","posts","potro","potts","potty","potus","pouch","pound","pours","pouty","power","powys","prada","prado","praha","praia","prana","prank","prato","pratt","prawn","prays","preds","preen","preet","prego","preps","presi","press","preys","priam","price","prick","pricy","pride","pried","prima","prime","primo","print","prinz","prion","prior","prise","prism","priti","prius","privy","priya","prize","probe","probs","prods","profs","promo","proms","prone","prong","proof","props","prose","prost","proto","proud","prout","prove","provo","prowl","proxy","prude","prune","pryce","pryor","psalm","pssst","psych","pubes","pubic","pubis","pucci","pucks","pudge","pudgy","puede","puffs","puffy","puget","pujol","puked","pukes","pulau","pulis","pulls","pulpy","pulse","pumas","pumps","punch","punic","punks","punky","punta","punto","punts","pupae","pupal","pupil","puppy","purdy","puree","purer","purge","purim","purrs","purse","pusan","pusha","pushy","pussy","putin","putra","putts","putty","puyol","pyaar","pygmy","pylon","pyotr","pyrex","qadir","qadri","qaeda","qaida","qanon","qasim","qatar","qiang","quack","quads","quaff","quaid","quail","quake","quali","quand","quang","quant","quark","quart","quash","quasi","quavo","quays","qubit","queen","queer","quell","query","queso","quest","queue","quick","quien","quiet","quill","quilt","quine","quinn","quint","quips","quire","quirk","quite","quito","quits","quora","quorn","quota","quote","quran","rabat","rabbi","rabia","rabid","rabin","raced","racer","races","racks","radar","radek","rader","radha","radii","radio","radix","radon","rafah","raffi","rafiq","rafts","ragan","raged","rager","rages","raghu","ragin","rahim","rahul","raids","raila","rails","raimi","raina","raine","rainn","rains","rainy","raisa","raise","raith","raitt","rajab","rajah","rajan","rajat","rajiv","rajon","rajoy","rajya","raked","rakes","rakhi","rakim","rally","ralph","ramah","raman","ramat","rambo","ramen","ramey","ramin","ramis","ramon","ramos","ramps","ramzi","rance","ranch","randa","randi","rando","randy","ranga","range","rania","ranks","rants","raoul","raped","raper","rapes","rapid","raqqa","rarer","rares","rashi","raspy","rasta","rasul","ratan","rated","rater","rates","ratio","ratna","raton","ratty","rauch","raved","ravel","raven","raver","raves","rawat","rawls","rayed","rayna","rayne","rayon","razak","razed","razer","razor","reach","react","reade","reads","ready","realm","reals","realy","reams","reaps","rears","rebar","rebbe","rebel","rebus","rebut","recap","recce","recep","recon","recto","recur","reddy","redid","redmi","redox","redux","reece","reeds","reedy","reefs","reeks","reels","reena","reese","reeve","refer","refit","regal","regan","regen","regex","regia","regis","rehab","reich","reidy","reign","reiki","reiko","reims","reina","reine","reins","reiss","reith","reits","reitz","rekha","relax","relay","relic","remit","remix","remus","renal","renan","renee","renew","renly","renny","renta","rents","renzi","renzo","repay","repel","reply","repos","repro","repub","rerum","rerun","reset","resin","resto","rests","retro","retry","reuse","reuss","revel","revie","revis","revue","reyes","reyna","rhein","rhett","rhine","rhino","rhoda","rhode","rhona","rhone","rhyme","rican","ricci","riche","ricin","ricki","ricks","ricky","ricoh","rider","rides","ridge","ridin","riffs","rifle","rifts","rigby","riggs","right","rigid","rigor","riker","rikki","riled","riles","riley","rilke","rimes","rinds","ringo","rings","rinks","rinne","rinse","rioja","riots","ripen","ripon","risen","riser","rises","rishi","risks","risky","rites","ritzy","rival","rivas","riven","river","rives","rivet","riyad","rizal","rizvi","rizzo","roach","roads","roald","roams","roane","roark","roars","roast","robbo","robby","robed","robes","robie","robin","robot","robyn","rocca","rocco","rocha","roche","rocko","rocks","rocky","rodan","roddy","roden","rodeo","rodin","rogan","rogen","roger","rogue","rohan","rohde","rohit","rojas","roker","roles","rolex","rolfe","rolla","rolle","rollo","rolls","rolly","roman","romeo","romer","ronan","ronda","ronde","rondo","ronin","ronny","roode","roofs","rooke","rooks","rooms","roomy","roose","roost","roots","roped","roper","ropes","roque","rosas","rosen","roses","rosey","roshi","rosie","rosin","rossa","rossi","rosso","rotor","rouen","rouge","rough","round","rouse","roush","route","rover","rowan","rowdy","rowed","rower","roxas","roxie","royal","royce","royer","royle","rspca","ruben","rubes","rubin","rubio","ruble","ruddy","rudin","rudra","rufus","rugby","ruger","ruins","rukia","ruled","ruler","rules","rumah","rumba","rumen","rumer","rummy","rumor","runes","runge","rungs","runic","runny","rupee","rural","rusev","russe","russo","rusty","ryder","ryman","ryong","ryota","ryuji","ryzen","saada","saadi","saarc","sabah","saban","saber","sabha","sabin","sable","sabra","sabre","sacco","sacha","sachi","sachs","sacks","sacra","sacre","sadat","sadhu","sadie","sadiq","sadly","saeed","safer","safes","sagan","sagar","sagas","sager","sages","saget","saggy","sagna","sahab","sahar","saheb","sahel","sahib","sahih","sahil","saida","sails","saint","sainz","saira","saith","saito","sajid","sakai","sakes","sakho","salad","salah","salam","salar","salas","salat","saleh","salem","sales","salih","salim","salix","salle","sally","salma","salon","salsa","salts","salty","salud","salut","salva","salve","salvo","samad","samaj","samar","samba","sambo","samia","samir","sammi","sammy","samoa","samos","samui","samus","sanaa","sande","sandi","sands","sandy","saner","sanfl","sangh","sango","sania","sanji","sanju","sanna","sansa","santa","sante","santi","santo","sanya","sanyo","sapir","sapna","sappy","sarah","sarai","saran","saree","sarge","sarin","saris","sarri","sasha","sasse","sassy","satan","satay","sated","satin","satya","satyr","sauce","saucy","saudi","sauer","sault","sauna","saute","saved","saver","saves","savin","savio","savor","savoy","savvy","sawed","saxon","sayed","sayer","sayid","sayin","sayre","scabs","scada","scala","scald","scale","scalp","scaly","scamp","scams","scans","scant","scape","scare","scarf","scarp","scars","scary","scene","scent","sched","schon","schur","scifi","scion","scoff","scold","scone","scoop","scoot","scope","score","scorn","scots","scott","scour","scout","scowl","scram","scrap","scree","screw","scrim","scrip","scrub","scrum","scuba","scuff","scull","seale","seals","sealy","seams","sears","seats","sebum","sects","sedan","seder","sedge","sedin","seeds","seedy","seein","seeks","seely","seema","seems","seeps","seers","segal","segel","seger","segue","seiji","seiko","seine","seitz","seize","sekai","selah","selby","selig","selim","sella","sells","selma","selva","semen","semis","sence","sends","senna","senor","sense","sensu","senza","seong","seoul","sepia","septa","serbo","serbs","serco","serfs","serge","sergi","serie","serif","serio","serra","serum","serve","servo","setae","sethi","seton","setup","seung","seuss","seven","sever","sewed","sewer","sewol","sexed","sexes","shack","shade","shadi","shady","shafi","shaft","shahi","shaka","shake","shaky","shale","shall","shalt","shame","shami","shams","shamu","shana","shand","shane","shang","shani","shank","shape","shara","shard","share","shari","shark","sharm","sharp","shaul","shaun","shave","shawl","shawn","sheaf","shear","sheba","shedd","sheds","sheed","sheen","sheep","sheer","sheet","sheff","shehu","sheik","shelf","shell","sheng","shere","sheri","sheva","shhhh","shias","shiba","shied","shiek","shift","shiga","shiki","shill","shima","shine","shing","shinn","shino","shins","shiny","shion","shipp","ships","shira","shire","shirk","shiro","shirt","shite","shits","shiva","shoah","shoal","shock","shoes","shoji","shona","shone","shook","shoop","shoot","shops","shore","shorn","short","shota","shots","shout","shove","showa","shown","shows","showy","shred","shree","shrek","shrew","shrub","shrug","shuai","shuck","shula","shuns","shunt","shura","shure","shuri","shush","shute","shuts","shyam","shyly","siang","sibyl","sicko","sided","sider","sides","sidhu","sidon","siege","siena","siete","sieur","sieve","sigel","sighs","sight","sigil","sigma","signe","signs","sigur","sikes","sikhs","silas","silks","silky","silla","sills","silly","silos","silva","simba","simla","simms","simon","sinai","sinan","since","sinch","sindh","sinew","singe","singh","sings","sinha","sinks","sinus","sioux","sippy","sired","siren","sires","sirte","sisal","sisko","sissi","sissy","sista","sitar","sited","sites","sitka","sivan","sixes","sixth","sixty","sized","sizes","skank","skate","skeet","skein","skews","skids","skied","skier","skies","skiff","skill","skimp","skins","skint","skips","skirt","skits","sklar","skoda","skool","skull","skunk","skype","slabs","slack","slade","slags","slain","slams","slang","slant","slaps","slash","slate","slats","slava","slave","slavs","slays","sleds","sleek","sleep","sleet","slept","slice","slick","slide","sligo","slime","slims","slimy","sling","slink","slips","slits","sloan","slobs","sloop","slope","slosh","sloss","sloth","slots","slows","slugs","slump","slums","slung","slurp","slurs","slush","sluts","slyly","smack","small","smart","smash","smaug","smear","smell","smelt","smile","smirk","smite","smith","smoak","smock","smoke","smoky","smoot","smote","smurf","smuts","smyth","snack","snafu","snags","snail","snake","snaky","snape","snaps","snare","snark","snarl","snead","sneak","sneed","sneer","sneha","snell","snide","sniff","snipe","snips","snobs","snook","snoop","snore","snort","snout","snows","snowy","snubs","snuck","snuff","soaks","soaps","soapy","soars","sobel","sober","sobre","socal","sochi","socio","socks","socom","sodas","sodom","sofas","sofia","sofie","softy","soggy","soils","sokka","sokol","solar","solas","soled","soler","soles","solid","solis","solly","solon","solos","solus","solve","somme","somos","sonam","sonar","songs","songz","sonia","sonic","sonja","sonne","sonny","sonos","sonya","soong","soooo","sooth","sooty","soper","soppy","sorel","soren","sores","soria","sorin","soros","sorry","sorta","sorts","sotto","soule","souls","sound","soups","soupy","sours","sousa","south","souza","sowed","sower","soyuz","space","spade","spain","spake","spall","spams","spank","spans","spanx","sparc","spare","spark","spars","spasm","spate","spats","spawn","speak","spear","speck","specs","spect","speed","speer","speke","spell","spelt","spend","spent","sperm","spews","spica","spice","spicy","spied","spiel","spies","spike","spiky","spill","spilt","spina","spine","spink","spins","spiny","spire","spiro","spite","spits","spitz","splat","splay","split","spock","spoil","spoke","spoof","spook","spool","spoon","spore","spork","sport","spots","spout","spray","spree","sprig","spuds","spunk","spurn","spurs","spurt","spyro","squad","squat","squaw","squib","squid","srsly","ssris","staal","stabs","staci","stack","stacy","stade","stadt","staff","stage","stagg","stags","stahl","staid","stain","stair","stake","stale","stalk","stall","stamp","stand","stang","stank","stans","staph","starc","stare","stark","starr","stars","start","starz","stash","stasi","state","stato","stats","stave","stays","stead","steak","steal","steam","steed","steel","steen","steep","steer","stein","stele","stems","stent","steph","steps","stern","steve","stews","steyn","stick","stiff","stile","still","stilt","stine","sting","stink","stint","stipe","stirs","stock","stoic","stoke","stole","stoll","stoma","stomp","stone","stony","stood","stool","stoop","stops","store","stork","storm","story","stott","stour","stout","stove","stowe","strap","strat","straw","stray","strep","strip","strix","strom","strop","strum","strut","stubs","stuck","studi","studs","study","stuff","stump","stung","stunk","stuns","stunt","stupa","sturm","sturt","style","suave","subic","subsp","sucks","sucky","sucre","sudan","suede","sufis","sugar","suggs","suing","suite","suits","sulky","sulla","sully","sumac","suman","sumer","summa","sunda","sunil","sunni","sunny","suomi","super","suppl","supra","surah","suraj","surat","surer","surfs","surge","surly","surry","surya","susan","sushi","susie","suter","sutra","sutta","suzan","suzie","sveta","swabs","swain","swale","swami","swamp","swamy","swank","swann","swans","swaps","swarm","swart","swash","swath","swati","sways","swear","sweat","swede","sweep","sweet","swell","swept","swift","swill","swims","swine","swing","swipe","swire","swirl","swish","swiss","swizz","swole","swoon","swoop","swope","sword","swore","sworn","swung","sybil","sykes","sylar","symes","symon","synch","syncs","synod","synth","syrah","syria","syrup","szabo","tabby","taber","tabla","table","taboo","tabor","tacet","tacit","tacks","tacky","tacos","taels","taffy","tahir","tahoe","taiga","taiji","taiko","tails","taint","tajik","takao","takei","taken","takeo","taker","takes","takin","talal","taleb","talep","tales","talia","talib","talks","tally","talon","talos","taluk","talus","taman","tamar","tamas","tambo","tamed","tamer","tamil","tamim","tamir","tammi","tammy","tampa","tamra","tandy","taney","tanga","tango","tangy","tania","tanis","tanja","tanka","tanks","tanna","tansy","tante","tanto","tanya","tapas","taped","taper","tapes","tapia","tapir","taran","taras","tarde","tardy","tarek","targa","tarik","tariq","tarot","tarpa","tarps","tarry","tarte","tarts","tarun","taryn","tased","taser","tasha","tashi","tasks","tasso","taste","tasty","tatar","tater","tatts","tatty","tatum","taunt","taupe","taupo","tauri","tavon","tawny","taxed","taxes","taxis","taxon","teach","teams","tears","teary","tease","teats","tebow","techs","techy","teddy","teemu","teena","teens","teeny","teeth","tegan","tejas","telco","telex","tello","tells","telly","telos","telus","tempe","tempo","temps","tempt","tenby","tench","tends","tenet","tengo","tengu","tenon","tenor","tense","tenth","tents","tepco","tepee","tepid","terme","terms","terns","terps","terra","terre","terri","terry","terse","tesco","tesla","tessa","testa","tests","testy","teton","tetra","tetsu","tevez","tevin","texan","texas","texte","texts","thabo","thais","thame","thana","thane","thang","thanh","thani","thank","thanx","thats","thaws","theca","theft","thein","their","theis","theme","theon","thera","there","these","theta","theyd","thicc","thick","thief","thiel","thiem","thier","thigh","thine","thing","think","thins","third","thoma","thome","thong","thora","thorn","thorp","those","thoth","thots","three","threw","throb","throw","thrum","thugs","thule","thumb","thump","thunk","thurs","thyme","tiago","tiana","tiara","tibbs","tiber","tibet","tibia","tibor","ticks","tidal","tides","tiene","tiers","tiger","tighe","tight","tigre","tikka","tilak","tilda","tilde","tiled","tiles","tills","tilly","tilts","timed","timer","times","timex","timey","timid","timms","timmy","timon","timor","timur","tinea","tines","tinge","tings","tinie","tinny","tinto","tints","tioga","tions","tippy","tipsy","tired","tires","tisch","tisha","titan","tithe","title","titty","titus","tizzy","toads","toady","toast","tobey","tobin","todas","today","toddy","todos","toefl","toews","toils","tokai","token","tokio","tokyo","tolle","tolls","tomar","tomas","tombs","tomei","tomes","tomic","tommy","tomoe","tonal","toned","toner","tones","toney","tonga","tongs","tonia","tonic","tonio","tonka","tonks","tonne","tonto","tonya","toole","tools","toons","tooth","toots","topaz","topic","topps","topsy","torah","torch","torii","toros","torre","torry","torso","torts","torus","tosca","toshi","total","totem","totes","tothe","totti","touch","tough","toure","tours","touts","tovar","tovey","towed","towel","tower","towie","towne","towns","toxic","toxin","toyed","tozer","trace","traci","track","tract","tracy","trade","trail","train","trait","tramp","trams","trang","trans","trapp","traps","trash","trask","trawl","trays","tread","treat","treed","trees","trejo","treks","treme","trend","trent","tress","trevi","triad","trial","tribe","trice","trick","tried","trier","tries","trigg","trike","trill","trims","trina","trine","tring","trini","trios","tripe","tripp","trips","trish","trite","trobe","trois","troll","troon","troop","trope","trots","trott","troup","trout","trove","truce","truck","trudy","truer","truex","truly","trump","trunk","truro","truss","trust","truth","tryin","tryna","tryon","tryst","tsang","tsars","tseng","tsing","tsuki","tsung","tubal","tubbs","tubby","tuber","tubes","tucci","tucks","tudor","tufts","tulip","tulle","tully","tulsa","tulsi","tulum","tummy","tumor","tuned","tuner","tunes","tunic","tunis","tuohy","tupac","tuple","tupou","turan","turbo","turds","turin","turki","turks","turku","turns","turvy","tusks","tutor","tutsi","tutti","tutto","twain","twang","twats","tweak","tweed","tween","tweet","twerk","twice","twigs","twill","twine","twink","twins","twirl","twist","twits","tyagi","tycho","tyger","tying","tyler","tynan","tyner","typed","types","typos","tyree","tyres","tyrod","tyrol","tyron","tyrus","tyson","tywin","uconn","udall","udder","uddin","udemy","ughhh","uhhhh","uhuru","ulama","ulcer","ulema","ullah","ulloa","ulmer","ulnar","ulsan","ultra","uluru","umami","umass","umber","umbra","umesh","ummah","ummmm","uncle","uncut","under","undid","undue","unfed","unfit","unfpa","unger","unhcr","unido","unify","union","unita","unite","units","unity","unlit","unmet","unrwa","unsee","unser","unsub","untap","unter","untie","until","unwed","unwin","unzip","upend","upham","upped","upper","upset","upton","urals","urban","urged","urges","uriah","uribe","uriel","urine","ursus","usada","usage","usagi","usaid","usain","usama","uscis","users","usher","using","usman","usmnt","uspto","usual","usurp","usury","utero","uther","utica","utley","uttar","utter","uvula","uzbek","vader","vadim","vague","vagus","valar","valet","valid","valla","valle","valli","valls","valor","value","valve","vamos","vamps","vance","vanda","vande","vandy","vanek","vanes","vanna","vanya","vapes","vapid","vapor","vardy","varga","varia","varma","varna","varro","varun","varus","varys","vasco","vases","vasil","vater","vault","vedas","vedic","veena","veera","veers","vegan","vegas","veils","veins","velar","velez","vella","velma","venal","venmo","venom","venti","vento","vents","venue","venus","verbs","verde","verdi","verge","verma","verna","verne","versa","verse","verso","verte","verve","vesey","vespa","vesta","vests","vetch","vette","veuve","vexed","vials","viber","vibes","vicar","vices","vichy","vicki","vicks","vicky","vidal","video","vidic","vidya","viejo","viera","vieux","views","viggo","vigil","vigor","vihar","vijay","vikas","vikes","vikki","vilas","villa","ville","vilma","vilna","vimeo","vinay","vince","vinci","viner","vines","vinny","vinod","vinyl","viola","viper","viral","virat","virgo","virus","visas","visit","visor","vista","vitae","vital","vitis","vitor","vitro","vitus","vivek","vives","vivid","vivre","vixen","vizio","vlogs","vocab","vocal","vodka","vogel","vogue","voice","voids","voigt","voila","voles","volga","volpe","volta","volte","volts","volvo","vomit","voted","voter","votes","votre","votto","vouch","vowed","vowel","voxel","vries","vroom","vulva","vying","waaay","waals","wacko","wacky","wacom","waded","wades","wafer","waged","wager","wages","wagga","wagon","wagyu","wahab","wahid","wahoo","waifu","wails","waist","waite","waits","waive","waken","waker","wakes","wakey","waldo","wales","walid","walks","walla","walls","wally","walsh","waltz","wanda","wands","waned","wanes","wanna","wants","waqar","wards","wares","wario","warms","warne","warns","warps","warsi","warts","washi","washy","wasim","wasnt","wasps","waste","watch","water","watts","waugh","waved","waver","waves","waxed","waxes","wayne","wayyy","wazir","weald","weare","wears","weary","weave","webby","weber","webgl","webmd","wedge","weeds","weedy","weeks","weems","weeps","weepy","weibo","weigh","weill","weird","weirs","weise","weiss","weisz","weitz","welby","welch","welds","welle","wells","welly","welsh","welts","wench","wendi","wendt","wendy","wentz","weren","werke","werth","wesen","wests","whack","whale","wharf","whats","wheat","wheel","whelp","where","which","whiff","whigs","while","whims","whine","whiny","whips","whirl","whisk","whist","white","whizz","whoah","whois","whole","whooo","whoop","whore","whorl","whose","whyte","wicca","wicks","widen","wider","widow","width","wiebe","wield","wierd","wiese","wifes","wifey","wigan","wight","wikia","wikis","wilco","wilde","wilds","wiles","wiley","wilks","willa","willi","wills","willy","wilma","wilts","wimax","wimps","wimpy","wince","winch","winds","windy","wines","wings","winks","winky","wiped","wiper","wipes","wired","wires","wirth","wiser","wishy","wisps","wispy","witch","witte","witty","wives","wmata","wogan","woken","wolfe","wolff","woman","wombs","women","wonka","wonky","woods","woody","wooed","woolf","wooly","woong","woooo","woops","woozy","words","wordy","works","world","worms","worry","worse","worst","worth","wotan","would","wound","woven","wowed","wrack","wraps","wrath","wreak","wreck","wrens","wrest","wring","wrist","write","writs","wrong","wrote","wrung","wryly","wuhan","wulff","wurst","wushu","wyatt","wyden","wyeth","wylde","wyler","wylie","wyman","wynne","wythe","xanax","xcode","xenia","xenon","xerox","xhaka","xhosa","xhtml","xiang","xiong","xviii","xxiii","xxvii","xxxvi","xxxxx","xylem","yacht","yadav","yadda","yahoo","yahya","yakov","yalta","yancy","yanks","yanni","yards","yaris","yarns","yarra","yasin","yasir","yasuo","yates","yatra","yawns","yayoi","yazoo","yearn","years","yeast","yeats","yeesh","yeezy","yells","yemen","yeong","yerba","yesss","yeung","yield","yikes","yknow","yodel","yoder","yogic","yogis","yohan","yokai","yoked","yolks","yonge","yorke","yorks","yosef","yoshi","yossi","youll","young","youre","yours","youse","youth","youve","ypres","yucca","yucky","yukio","yukon","yulia","yulin","yummy","yunus","yuriy","yusef","yusuf","yuuki","yuval","zabel","zacks","zafar","zahid","zahir","zahra","zaidi","zaire","zakat","zakir","zaman","zandt","zappa","zappy","zaria","zarif","zarya","zayed","zebra","zeiss","zelda","zeman","zemin","zenit","zenon","zeros","zesty","zetas","zhang","zheng","zhong","ziggy","zilch","zilla","zines","zinke","zippo","zippy","zohar","zonal","zoned","zoner","zones","zooey","zooms","zoran","zorro","zouma","zulus","zumba","zweig","zynga"]);
+const ROWS=6,COLS=5;
+const STORAGE={settings:"nictionary.settings.v1",stats:"nictionary.stats.v2",legacyStats:"nictionary.stats.v1",daily:"nictionary.daily.v1",seenHelp:"nictionary.help.v1"};
+const LEGACY_STORAGE={settings:"nicktionary.settings.v1",stats:"nicktionary.stats.v2",legacyStats:"nicktionary.stats.v1",daily:"nicktionary.daily.v1",seenHelp:"nicktionary.help.v1"};
+migrateLegacyStorage();
+const defaultSettings={hard:false,contrast:false,reduceMotion:false};
+let settings=loadSettings();
+let stats=loadStats();
+let statsView="daily";
+let mode="daily",answer="",guesses=[],current="",gameOver=false,isAnimating=false,puzzleNumber=1,practiceId=0;
+const board=document.getElementById("board"),keyboard=document.getElementById("keyboard");
+
+function safeGet(key){try{return localStorage.getItem(key)}catch{return null}}
+function safeRemove(key){try{localStorage.removeItem(key)}catch{}}
+function parseStoredJSON(key){try{const raw=safeGet(key);return raw===null?null:JSON.parse(raw)}catch{return null}}
+function saveJSON(key,value){try{localStorage.setItem(key,JSON.stringify(value));return true}catch{return false}}
+function migrateLegacyStorage(){for(const name of Object.keys(STORAGE)){if(safeGet(STORAGE[name])!==null)continue;const legacy=safeGet(LEGACY_STORAGE[name]);if(legacy===null)continue;try{localStorage.setItem(STORAGE[name],legacy)}catch{}}}
+function clone(value){return JSON.parse(JSON.stringify(value))}
+function loadSettings(){const saved=parseStoredJSON(STORAGE.settings);return {...defaultSettings,...(saved&&typeof saved==="object"?saved:{})}}
+function emptyBucket(){return {played:0,wins:0,distribution:[0,0,0,0,0,0]}}
+function freshStats(){return {daily:{...emptyBucket(),currentStreak:0,maxStreak:0,lastWinDate:""},practice:emptyBucket(),legacy:emptyBucket()}}
+function nonNegativeInt(value){const n=Number(value);return Number.isFinite(n)&&n>0?Math.floor(n):0}
+function normalizeDistribution(value){const source=Array.isArray(value)?value:[];return Array.from({length:6},(_,i)=>nonNegativeInt(source[i]))}
+function normalizeBucket(value){const source=value&&typeof value==="object"?value:{};return {played:nonNegativeInt(source.played),wins:nonNegativeInt(source.wins),distribution:normalizeDistribution(source.distribution)}}
+function normalizeStats(value){
+ const clean=freshStats();
+ if(value&&typeof value==="object"&&("daily" in value||"practice" in value||"legacy" in value)){
+  clean.daily={...normalizeBucket(value.daily),currentStreak:nonNegativeInt(value.daily?.currentStreak),maxStreak:nonNegativeInt(value.daily?.maxStreak),lastWinDate:typeof value.daily?.lastWinDate==="string"?value.daily.lastWinDate:""};
+  clean.practice=normalizeBucket(value.practice);clean.legacy=normalizeBucket(value.legacy);return clean
+ }
+ if(value&&typeof value==="object"&&("played" in value||"wins" in value)){
+  clean.legacy=normalizeBucket(value);clean.daily.currentStreak=nonNegativeInt(value.currentStreak);clean.daily.maxStreak=nonNegativeInt(value.maxStreak);clean.daily.lastWinDate=typeof value.lastWinDate==="string"?value.lastWinDate:""
+ }
+ return clean
+}
+function loadStats(){
+ const current=parseStoredJSON(STORAGE.stats);if(current!==null)return normalizeStats(current);
+ const legacy=parseStoredJSON(STORAGE.legacyStats);const migrated=normalizeStats(legacy);if(legacy!==null)saveJSON(STORAGE.stats,migrated);return migrated
+}
+function dateKey(d=new Date()){return [d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-")}
+function dayIndex(){const now=new Date();const localMidnight=new Date(now.getFullYear(),now.getMonth(),now.getDate());const epoch=new Date(2026,0,1);return Math.floor((localMidnight-epoch)/86400000)}
+function dailyAnswer(){const idx=((dayIndex()%DAILY_SEQUENCE.length)+DAILY_SEQUENCE.length)%DAILY_SEQUENCE.length;return DAILY_SEQUENCE[idx]}
+function randomAnswer(){try{const a=new Uint32Array(1);crypto.getRandomValues(a);return ANSWERS[a[0]%ANSWERS.length]}catch{return ANSWERS[Math.floor(Math.random()*ANSWERS.length)]}}
+function el(id){return document.getElementById(id)}
+function buildBoard(){board.innerHTML="";for(let r=0;r<ROWS;r++){const row=document.createElement("div");row.className="row";row.setAttribute("role","row");for(let c=0;c<COLS;c++){const tile=document.createElement("div");tile.className="tile";tile.setAttribute("role","gridcell");tile.setAttribute("aria-label",`Row ${r+1}, column ${c+1}, empty`);row.appendChild(tile)}board.appendChild(row)}}
+function buildKeyboard(){const rows=["qwertyuiop","asdfghjkl",["enter",..."zxcvbnm","back"]];keyboard.innerHTML="";for(const rowKeys of rows){const row=document.createElement("div");row.className="key-row";for(const key of rowKeys){const b=document.createElement("button");b.className="key"+(key.length>1?" wide":"");b.dataset.key=key;b.textContent=key==="back"?"⌫":key;b.setAttribute("aria-label",key==="back"?"Backspace":key);b.addEventListener("click",()=>handleKey(key));row.appendChild(b)}keyboard.appendChild(row)}}
+function setMode(next){if(next===mode)return;mode=next;const dailyActive=mode==="daily",practiceActive=mode==="practice";el("dailyMode").classList.toggle("active",dailyActive);el("practiceMode").classList.toggle("active",practiceActive);el("dailyMode").setAttribute("aria-pressed",String(dailyActive));el("practiceMode").setAttribute("aria-pressed",String(practiceActive));startGame()}
+function startGame(){guesses=[];current="";gameOver=false;isAnimating=false;clearBoardVisuals();clearKeyboardVisuals();if(mode==="daily"){puzzleNumber=dayIndex()+1;answer=dailyAnswer();restoreDaily()}else{practiceId++;answer=randomAnswer()}render();updateMeta()}
+function clearBoardVisuals(){for(const tile of board.querySelectorAll(".tile")){tile.textContent="";tile.className="tile";tile.removeAttribute("data-state")}}
+function clearKeyboardVisuals(){for(const key of keyboard.querySelectorAll(".key")){key.classList.remove("correct","present","absent");key.removeAttribute("data-state");const label=key.dataset.key==="back"?"Backspace":key.dataset.key==="enter"?"Enter":key.dataset.key?.toUpperCase();if(label)key.setAttribute("aria-label",label)}}
+function restoreDaily(){const saved=parseStoredJSON(STORAGE.daily)||{};if(saved.date===dateKey()&&saved.answer===answer&&Array.isArray(saved.guesses)){guesses=saved.guesses.filter(g=>typeof g==="string"&&g.length===5).slice(0,6);gameOver=Boolean(saved.gameOver)}}
+function persistDaily(){if(mode!=="daily")return;saveJSON(STORAGE.daily,{date:dateKey(),answer,guesses,gameOver})}
+function render(){clearBoardVisuals();clearKeyboardVisuals();guesses.forEach((g,r)=>paintGuess(g,r,false));if(!gameOver){const r=guesses.length;[...current].forEach((ch,c)=>{const t=getTile(r,c);t.textContent=ch;t.classList.add("filled");t.setAttribute("aria-label",`Row ${r+1}, column ${c+1}, ${ch}`)})}updateMeta()}
+function getTile(r,c){return board.children[r].children[c]}
+function evaluate(guess){const result=Array(COLS).fill("absent"),remaining={};for(let i=0;i<COLS;i++){if(guess[i]===answer[i])result[i]="correct";else remaining[answer[i]]=(remaining[answer[i]]||0)+1}for(let i=0;i<COLS;i++){if(result[i]==="correct")continue;const ch=guess[i];if((remaining[ch]||0)>0){result[i]="present";remaining[ch]--}}return result}
+function paintGuess(guess,row,animate=true){const states=evaluate(guess);states.forEach((state,c)=>{const tile=getTile(row,c);tile.textContent=guess[c];tile.classList.add("filled");const apply=()=>{tile.classList.add(state);tile.dataset.state=state;tile.setAttribute("aria-label",`${guess[c]}, ${state}`);updateKey(guess[c],state)};if(animate){tile.classList.add("reveal");setTimeout(apply,c*260+215)}else apply()});return states}
+function updateKey(letter,state){const key=keyboard.querySelector(`[data-key="${letter}"]`);if(!key)return;const rank={absent:1,present:2,correct:3};const old=["absent","present","correct"].find(x=>key.classList.contains(x)||key.dataset.state===x);if(!old||rank[state]>rank[old]){key.classList.remove("absent","present","correct");key.classList.add(state);key.dataset.state=state;key.setAttribute("aria-label",`${letter.toUpperCase()}, ${state}`)}}
+function refreshKeyboardStates(){clearKeyboardVisuals();for(const guess of guesses){evaluate(guess).forEach((state,i)=>updateKey(guess[i],state))}}
+function handleKey(key){if(gameOver||isAnimating)return;if(key==="enter")return submitGuess();if(key==="back"){current=current.slice(0,-1);render();return}if(/^[a-z]$/.test(key)&&current.length<COLS){current+=key;render()}}
+function submitGuess(){if(current.length<COLS){shakeRow();return toast("Not enough letters")}if(!VALID_WORDS.has(current)){shakeRow();return toast("Not in the offline word list")}const hardError=settings.hard?validateHardMode(current):"";if(hardError){shakeRow();return toast(hardError)}const guess=current;const row=guesses.length;guesses.push(guess);current="";isAnimating=true;paintGuess(guess,row,true);setTimeout(()=>{isAnimating=false;const won=guess===answer;if(won){gameOver=true;celebrateRow(row);finishGame(true)}else if(guesses.length===ROWS){gameOver=true;finishGame(false)}persistDaily();refreshKeyboardStates();updateMeta()},COLS*260+180)}
+function validateHardMode(guess){for(let r=0;r<guesses.length;r++){const prior=guesses[r],states=evaluate(prior);for(let i=0;i<COLS;i++){if(states[i]==="correct"&&guess[i]!==prior[i])return `${prior[i].toUpperCase()} must stay in position ${i+1}`}
+ const needed={};states.forEach((s,i)=>{if(s==="present"||s==="correct")needed[prior[i]]=(needed[prior[i]]||0)+1});for(const [ch,count] of Object.entries(needed)){if([...guess].filter(x=>x===ch).length<count)return `Guess must contain ${ch.toUpperCase()}`}}
+ return ""}
+function shakeRow(){const row=board.children[guesses.length];for(const t of row.children){t.classList.remove("shake");void t.offsetWidth;t.classList.add("shake")}}
+function celebrateRow(r){[...board.children[r].children].forEach((t,i)=>setTimeout(()=>t.classList.add("bounce"),i*90))}
+function finishGame(won){recordStats(won);persistDaily();setTimeout(()=>showEnd(won),900)}
+function recordStats(won){stats=loadStats();const bucket=stats[mode];bucket.played++;if(won){bucket.wins++;bucket.distribution[guesses.length-1]++}if(mode==="daily"){if(won){const today=dateKey(),y=new Date();y.setDate(y.getDate()-1);const yesterday=dateKey(y);bucket.currentStreak=bucket.lastWinDate===yesterday?bucket.currentStreak+1:bucket.lastWinDate===today?bucket.currentStreak:1;bucket.lastWinDate=today;bucket.maxStreak=Math.max(bucket.maxStreak,bucket.currentStreak)}else bucket.currentStreak=0}saveJSON(STORAGE.stats,stats);updateMeta()}
+function updateMeta(){stats=loadStats();el("puzzlePill").textContent=mode==="daily"?`Daily #${Math.max(1,puzzleNumber)}`:`Practice ${practiceId}`;el("statusText").textContent=gameOver?"Complete":`${ROWS-guesses.length} ${ROWS-guesses.length===1?"try":"tries"}`;el("streakText").textContent=`🔥 ${stats.daily.currentStreak}`}
+function showEnd(won){el("answerText").textContent=answer.toUpperCase();el("endTitle").textContent=won?"Nicely done":"Good workout";el("endMessage").textContent=won?winMessage(guesses.length):"That one was stubborn. The answer was:";el("sharePreview").textContent=resultGridText();el("nextBtn").textContent=mode==="practice"?"New practice game":"Play a practice game";el("nextNote").textContent=mode==="daily"?"Your next daily puzzle appears at local midnight.":"Practice games have their own separate statistics.";openModal("endModal")}
+function winMessage(n){return ["","A one-guess wonder.","Excellent deduction.","Sharp work.","Nicely reasoned.","Pulled it back.","Right at the wire."][n]}
+function resultGridText(){return guesses.map(g=>evaluate(g).map(s=>s==="correct"?(settings.contrast?"🟧":"🟩"):s==="present"?(settings.contrast?"🟦":"🟨"):"⬛").join("")).join("\n")}
+function resultText(){if(!gameOver)return "Finish the current puzzle before sharing.";const score=guesses.at(-1)===answer?guesses.length:"X";const title=mode==="daily"?`Nictionary #${Math.max(1,puzzleNumber)}`:`Nictionary Practice ${practiceId}`;return `${title} ${score}/6\n\n${resultGridText()}\n\nOffline word play`}
+function openShareOptions(){if(!gameOver)return toast("Finish the puzzle before sharing");el("shareModalPreview").textContent=resultGridText();el("nativeShareBtn").hidden=!navigator.share;openModal("shareModal")}
+async function shareViaDevice(){if(!gameOver)return toast("Finish the puzzle before sharing");if(!navigator.share)return copyResultToClipboard();try{await navigator.share({title:"Nictionary",text:resultText()})}catch(e){if(e?.name!=="AbortError")toast("Could not open sharing options")}}
+async function copyResultToClipboard(){if(!gameOver)return toast("Finish the puzzle before sharing");const text=resultText();try{if(navigator.clipboard&&location.protocol!=="file:"){await navigator.clipboard.writeText(text);toast("Result copied to clipboard")}else fallbackCopy(text)}catch{fallbackCopy(text)}}
+function fallbackCopy(text){const ta=document.createElement("textarea");ta.value=text;ta.style.position="fixed";ta.style.opacity="0";document.body.appendChild(ta);ta.select();try{document.execCommand("copy");toast("Result copied to clipboard")}catch{prompt("Copy your result:",text)}ta.remove()}
+function toast(message,ms=1700){const t=document.createElement("div");t.className="toast";t.textContent=message;el("toasts").appendChild(t);setTimeout(()=>t.remove(),ms)}
+function openModal(id){el(id).classList.add("open");el(id).querySelector("button")?.focus()}
+function closeModal(id){el(id).classList.remove("open")}
+function combineBuckets(...buckets){const combined=emptyBucket();for(const bucket of buckets){combined.played+=bucket.played;combined.wins+=bucket.wins;bucket.distribution.forEach((v,i)=>combined.distribution[i]+=v)}return combined}
+function averageGuesses(bucket){if(!bucket.wins)return "—";const total=bucket.distribution.reduce((sum,count,i)=>sum+count*(i+1),0);return (total/bucket.wins).toFixed(1)}
+function setStatsView(view){statsView=["daily","practice","combined"].includes(view)?view:"daily";document.querySelectorAll("[data-stats-view]").forEach(btn=>{const active=btn.dataset.statsView===statsView;btn.classList.toggle("active",active);btn.setAttribute("aria-selected",String(active))});renderStats()}
+function renderStats(){
+ stats=loadStats();const isDaily=statsView==="daily";const bucket=isDaily?stats.daily:statsView==="practice"?stats.practice:combineBuckets(stats.daily,stats.practice,stats.legacy);
+ el("playedStat").textContent=bucket.played;el("winStat").textContent=bucket.played?Math.round(bucket.wins/bucket.played*100):0;
+ el("playedLabel").textContent="Played";el("winLabel").textContent="Win %";
+ if(isDaily){el("streakStat").textContent=stats.daily.currentStreak;el("maxStat").textContent=stats.daily.maxStreak;el("streakLabel").textContent="Streak";el("maxLabel").textContent="Best"}
+ else{el("streakStat").textContent=bucket.wins;el("maxStat").textContent=averageGuesses(bucket);el("streakLabel").textContent="Wins";el("maxLabel").textContent="Avg guess"}
+ el("statsNote").textContent=statsView==="combined"&&stats.legacy.played?"Earlier games are included here because older Nictionary versions did not distinguish Daily from Practice.":"";
+ const dist=el("distribution"),values=bucket.distribution,max=Math.max(1,...values);dist.innerHTML="";values.forEach((v,i)=>{const row=document.createElement("div");row.className="dist-row";const bar=document.createElement("div");const highlight=gameOver&&guesses.at(-1)===answer&&guesses.length===i+1&&(statsView===mode||statsView==="combined");bar.className="bar"+(highlight?" current":"");bar.style.width=`${Math.max(9,v/max*100)}%`;bar.textContent=v;row.innerHTML=`<span>${i+1}</span>`;row.appendChild(bar);dist.appendChild(row)})
+}
+function applySettings(){document.body.classList.toggle("high-contrast",settings.contrast);document.body.classList.toggle("reduce-motion",settings.reduceMotion);el("hardMode").checked=settings.hard;el("contrastMode").checked=settings.contrast;el("motionMode").checked=settings.reduceMotion;render()}
+function exportData(){
+ stats=loadStats();settings=loadSettings();const payload={app:"Nictionary",appVersion:"1.9",formatVersion:2,exportedAt:new Date().toISOString(),data:{settings,stats,daily:parseStoredJSON(STORAGE.daily),seenHelp:Boolean(safeGet(STORAGE.seenHelp))}};
+ try{const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const link=document.createElement("a");link.href=url;link.download=`Nictionary_Backup_${dateKey()}.json`;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);toast("Backup exported")}catch{toast("Could not create the backup file")}
+}
+async function importData(file){
+ if(!file)return;try{const payload=JSON.parse(await file.text());if(!payload||!["Nictionary","Nicktionary"].includes(payload.app)||!payload.data||typeof payload.data!=="object")throw new Error("Invalid backup");if(!confirm("Restore this Nictionary backup? Current saved progress and statistics will be replaced."))return;
+  const importedSettings={...defaultSettings,...(payload.data.settings&&typeof payload.data.settings==="object"?payload.data.settings:{})};const importedStats=normalizeStats(payload.data.stats);
+  saveJSON(STORAGE.settings,importedSettings);saveJSON(STORAGE.stats,importedStats);
+  if(payload.data.daily&&typeof payload.data.daily==="object")saveJSON(STORAGE.daily,payload.data.daily);else safeRemove(STORAGE.daily);
+  if(payload.data.seenHelp)saveJSON(STORAGE.seenHelp,1);else safeRemove(STORAGE.seenHelp);
+  settings=loadSettings();stats=loadStats();closeModal("settingsModal");applySettings();startGame();toast("Backup restored")
+ }catch{toast("That file is not a valid Nictionary backup",2600)}finally{el("importFile").value=""}
+}
+function clearData(){if(!confirm("Clear Nictionary settings, daily progress, and all statistics?"))return;[...Object.values(STORAGE),...Object.values(LEGACY_STORAGE)].forEach(safeRemove);settings={...defaultSettings};stats=freshStats();closeModal("settingsModal");applySettings();startGame();toast("Saved data cleared")}
+
+window.addEventListener("keydown",e=>{if(document.querySelector(".overlay.open")){if(e.key==="Escape")document.querySelectorAll(".overlay.open").forEach(x=>x.classList.remove("open"));return}const k=e.key.toLowerCase();if(k==="enter"||k==="backspace"||/^[a-z]$/.test(k)){e.preventDefault();handleKey(k==="backspace"?"back":k)}});
+el("dailyMode").addEventListener("click",()=>setMode("daily"));el("practiceMode").addEventListener("click",()=>setMode("practice"));
+el("helpBtn").addEventListener("click",()=>openModal("helpModal"));el("headerShareBtn").addEventListener("click",openShareOptions);el("settingsBtn").addEventListener("click",()=>openModal("settingsModal"));el("statsBtn").addEventListener("click",()=>{setStatsView(mode);openModal("statsModal")});
+document.querySelectorAll("[data-stats-view]").forEach(btn=>btn.addEventListener("click",()=>setStatsView(btn.dataset.statsView)));
+document.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",()=>closeModal(b.dataset.close)));document.querySelectorAll(".overlay").forEach(o=>o.addEventListener("click",e=>{if(e.target===o)closeModal(o.id)}));
+el("hardMode").addEventListener("change",e=>{settings.hard=e.target.checked;saveJSON(STORAGE.settings,settings)});el("contrastMode").addEventListener("change",e=>{settings.contrast=e.target.checked;saveJSON(STORAGE.settings,settings);applySettings()});el("motionMode").addEventListener("change",e=>{settings.reduceMotion=e.target.checked;saveJSON(STORAGE.settings,settings);applySettings()});
+el("exportDataBtn").addEventListener("click",exportData);el("importDataBtn").addEventListener("click",()=>el("importFile").click());el("importFile").addEventListener("change",e=>importData(e.target.files?.[0]));el("clearDataBtn").addEventListener("click",clearData);
+el("shareBtn").addEventListener("click",openShareOptions);el("shareStatsBtn").addEventListener("click",openShareOptions);el("nativeShareBtn").addEventListener("click",shareViaDevice);el("copyShareBtn").addEventListener("click",copyResultToClipboard);el("nextBtn").addEventListener("click",()=>{closeModal("endModal");if(mode!=="practice")setMode("practice");else startGame()});
+
+buildBoard();buildKeyboard();applySettings();startGame();
+if(!safeGet(STORAGE.seenHelp)){openModal("helpModal");saveJSON(STORAGE.seenHelp,1)}
+</script>
+</body>
+</html>
