@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#111319">
-<title>Nictionary — Offline Word Game v1.9</title>
+<title>Nictionary — Offline Word Game v1.10</title>
 <style>
 :root{
   --bg:#101315;
@@ -749,6 +749,37 @@ input{
   color:#091018 !important;
 }
 
+
+/* ============================================================
+   v1.10 keyboard-state repair and feature-polish pass
+   The CoPilot-style base keyboard gray and the previous absent
+   gray were almost identical. Absent keys now move to a clearly
+   darker Wordle-style state, while present/correct still take
+   priority through updateKey().
+   ============================================================ */
+:root{
+  --key-absent:#3a3a3c;
+  --tile-absent:#3a3a3c;
+}
+.tile.absent,
+.tile[data-state="absent"]{
+  background:var(--tile-absent) !important;
+  border-color:var(--tile-absent) !important;
+  color:#fff !important;
+}
+.key.absent,
+.key[data-state="absent"]{
+  background:var(--key-absent) !important;
+  color:#fff !important;
+}
+.high-contrast .tile.absent,
+.high-contrast .tile[data-state="absent"],
+.high-contrast .key.absent,
+.high-contrast .key[data-state="absent"]{
+  background:#414857 !important;
+  color:#fff !important;
+}
+
 </style>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%234f46e5'/><text y='.9em' font-size='72' x='12' fill='white' font-family='Arial Black,sans-serif' font-weight='900'>N</text></svg>">
 </head>
@@ -903,7 +934,7 @@ function render(){clearBoardVisuals();clearKeyboardVisuals();guesses.forEach((g,
 function getTile(r,c){return board.children[r].children[c]}
 function evaluate(guess){const result=Array(COLS).fill("absent"),remaining={};for(let i=0;i<COLS;i++){if(guess[i]===answer[i])result[i]="correct";else remaining[answer[i]]=(remaining[answer[i]]||0)+1}for(let i=0;i<COLS;i++){if(result[i]==="correct")continue;const ch=guess[i];if((remaining[ch]||0)>0){result[i]="present";remaining[ch]--}}return result}
 function paintGuess(guess,row,animate=true){const states=evaluate(guess);states.forEach((state,c)=>{const tile=getTile(row,c);tile.textContent=guess[c];tile.classList.add("filled");const apply=()=>{tile.classList.add(state);tile.dataset.state=state;tile.setAttribute("aria-label",`${guess[c]}, ${state}`);updateKey(guess[c],state)};if(animate){tile.classList.add("reveal");setTimeout(apply,c*260+215)}else apply()});return states}
-function updateKey(letter,state){const key=keyboard.querySelector(`[data-key="${letter}"]`);if(!key)return;const rank={absent:1,present:2,correct:3};const old=["absent","present","correct"].find(x=>key.classList.contains(x)||key.dataset.state===x);if(!old||rank[state]>rank[old]){key.classList.remove("absent","present","correct");key.classList.add(state);key.dataset.state=state;key.setAttribute("aria-label",`${letter.toUpperCase()}, ${state}`)}}
+function updateKey(letter,state){const normalized=String(letter||"").toLowerCase();const key=keyboard.querySelector(`[data-key="${normalized}"]`);const rank={absent:1,present:2,correct:3};if(!key||!rank[state])return;const old=key.dataset.state||["absent","present","correct"].find(x=>key.classList.contains(x));if(old&&rank[old]>rank[state])return;key.classList.remove("absent","present","correct");key.classList.add(state);key.dataset.state=state;key.setAttribute("aria-label",`${normalized.toUpperCase()}, ${state}`)}
 function refreshKeyboardStates(){clearKeyboardVisuals();for(const guess of guesses){evaluate(guess).forEach((state,i)=>updateKey(guess[i],state))}}
 function handleKey(key){if(gameOver||isAnimating)return;if(key==="enter")return submitGuess();if(key==="back"){current=current.slice(0,-1);render();return}if(/^[a-z]$/.test(key)&&current.length<COLS){current+=key;render()}}
 function submitGuess(){if(current.length<COLS){shakeRow();return toast("Not enough letters")}if(!VALID_WORDS.has(current)){shakeRow();return toast("Not in the offline word list")}const hardError=settings.hard?validateHardMode(current):"";if(hardError){shakeRow();return toast(hardError)}const guess=current;const row=guesses.length;guesses.push(guess);current="";isAnimating=true;paintGuess(guess,row,true);setTimeout(()=>{isAnimating=false;const won=guess===answer;if(won){gameOver=true;celebrateRow(row);finishGame(true)}else if(guesses.length===ROWS){gameOver=true;finishGame(false)}persistDaily();refreshKeyboardStates();updateMeta()},COLS*260+180)}
@@ -940,7 +971,7 @@ function renderStats(){
 }
 function applySettings(){document.body.classList.toggle("high-contrast",settings.contrast);document.body.classList.toggle("reduce-motion",settings.reduceMotion);el("hardMode").checked=settings.hard;el("contrastMode").checked=settings.contrast;el("motionMode").checked=settings.reduceMotion;render()}
 function exportData(){
- stats=loadStats();settings=loadSettings();const payload={app:"Nictionary",appVersion:"1.9",formatVersion:2,exportedAt:new Date().toISOString(),data:{settings,stats,daily:parseStoredJSON(STORAGE.daily),seenHelp:Boolean(safeGet(STORAGE.seenHelp))}};
+ stats=loadStats();settings=loadSettings();const payload={app:"Nictionary",appVersion:"1.10",formatVersion:2,exportedAt:new Date().toISOString(),data:{settings,stats,daily:parseStoredJSON(STORAGE.daily),seenHelp:Boolean(safeGet(STORAGE.seenHelp))}};
  try{const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const link=document.createElement("a");link.href=url;link.download=`Nictionary_Backup_${dateKey()}.json`;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);toast("Backup exported")}catch{toast("Could not create the backup file")}
 }
 async function importData(file){
