@@ -57,3 +57,5 @@ jobs:
           path: android/app/build/outputs/apk/release/Nictionary-v3.21.7.apk
           if-no-files-found: error
           retention-days: 14
+
+# Triggered after the default-branch workflow was installed.
